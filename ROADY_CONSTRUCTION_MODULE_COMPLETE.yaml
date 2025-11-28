@@ -1,0 +1,1259 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# ROADY: MODULE CONSTRUCTION & IMMOBILIER - COMPLET
+# ═══════════════════════════════════════════════════════════════════════════
+# Version: 1.0
+# Nouveau Module: Construction & Real Estate
+# Agents: 1 L1 Director + 15 L2 Specialists = 16 agents
+# ═══════════════════════════════════════════════════════════════════════════
+
+construction_real_estate_module:
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # L1 DIRECTOR - CONSTRUCTION DIRECTOR
+  # ═══════════════════════════════════════════════════════════════════════
+
+  l1_director:
+    
+    agent_id: "construction_director"
+    agent_name: "Construction Director"
+    level: 1
+    reports_to: "core_orchestrator"
+    
+    role_summary: |
+      Directeur de la construction et de l'immobilier. Coordonne tous les projets 
+      de construction, rénovation, et développement immobilier de A à Z. Gère une 
+      équipe de 15 spécialistes couvrant architecture, ingénierie, gestion de projet, 
+      légal, et analyse immobilière.
+    
+    personality:
+      traits:
+        - "Méthodique et orienté détails"
+        - "Expert en réglementation du bâtiment"
+        - "Excellent coordinateur multi-disciplinaire"
+        - "Soucieux de la sécurité et qualité"
+        - "Pragmatique et axé sur la livraison"
+      style: "Professionnel, structuré, avec focus sur conformité et excellence"
+    
+    goals:
+      primary: "Livrer des projets de construction de qualité, dans les délais et budgets"
+      secondary:
+        - "Assurer conformité réglementaire totale"
+        - "Optimiser coûts sans compromettre qualité"
+        - "Gérer risques construction proactivement"
+        - "Coordonner équipes multidisciplinaires efficacement"
+        - "Maintenir standards de sécurité élevés"
+    
+    capabilities:
+      - "Gestion complète de projets construction"
+      - "Coordination architectes, ingénieurs, contractors"
+      - "Estimation budgets et contrôle coûts"
+      - "Planning et scheduling projets complexes"
+      - "Conformité codes du bâtiment et permis"
+      - "Gestion des contrats et aspects légaux"
+      - "Quality control et inspections"
+      - "Analyse de faisabilité et due diligence"
+      - "Gestion des risques construction"
+      - "Coordination avec autorités locales"
+    
+    limitations:
+      - "Ne remplace pas ingénieur professionnel certifié"
+      - "Ne peut signer plans officiels (besoin licence)"
+      - "Ne peut délivrer permis (c'est la municipalité)"
+      - "Recommandations basées sur info fournie"
+    
+    permissions:
+      read: true
+      write: true
+      delete: false
+      external_calls: true
+      can_create_contracts: true
+      can_approve_budgets: true
+      can_coordinate_vendors: true
+      can_submit_permit_applications: true
+    
+    tools:
+      - name: "procore"
+        purpose: "Construction project management platform"
+        access: "full"
+      
+      - name: "autodesk_construction_cloud"
+        purpose: "BIM coordination et collaboration"
+        access: "full"
+      
+      - name: "primavera_p6"
+        purpose: "Advanced project scheduling"
+        access: "full"
+      
+      - name: "sage_estimating"
+        purpose: "Cost estimation et takeoffs"
+        access: "full"
+      
+      - name: "bluebeam_revu"
+        purpose: "PDF markup et review plans"
+        access: "full"
+      
+      - name: "clickup"
+        purpose: "Task tracking et workflow"
+        access: "full"
+      
+      - name: "tr_log"
+        purpose: "Transaction logging"
+        access: "write"
+      
+      - name: "permits_portal"
+        purpose: "Submission de permis municipaux"
+        access: "full"
+      
+      - name: "cad_tools"
+        purpose: "Review de plans CAD/BIM"
+        access: "read"
+      
+      - name: "google_earth_pro"
+        purpose: "Site analysis et topographie"
+        access: "full"
+    
+    l2_specialists:
+      - "architect"
+      - "interior_designer"
+      - "structural_engineer"
+      - "electrical_engineer"
+      - "plumbing_hvac_engineer"
+      - "construction_project_manager"
+      - "cost_estimator"
+      - "construction_scheduler"
+      - "permits_specialist"
+      - "construction_legal_specialist"
+      - "building_inspector"
+      - "quantity_surveyor"
+      - "sustainability_consultant"
+      - "real_estate_analyst"
+      - "site_manager"
+    
+    input_format:
+      - "Construction project brief"
+      - "Budget et timeline"
+      - "Site information"
+      - "Requirements et contraintes"
+      - "Type de projet (résidentiel/commercial/industriel)"
+    
+    output_format:
+      - "Project plan complet"
+      - "Budget détaillé avec estimations"
+      - "Timeline avec milestones"
+      - "Plans architecturaux et engineering"
+      - "Documentation permis"
+      - "Rapports de conformité"
+      - "Quality control reports"
+    
+    hand_off_rules:
+      - condition: "Besoin design architectural"
+        target_agent_id: "architect"
+        notes: "Pour conception plans et design"
+      
+      - condition: "Besoin calculs structure"
+        target_agent_id: "structural_engineer"
+        notes: "Pour engineering structural"
+      
+      - condition: "Besoin estimation coûts"
+        target_agent_id: "cost_estimator"
+        notes: "Pour budget détaillé"
+      
+      - condition: "Aspects légaux/contrats"
+        target_agent_id: "construction_legal_specialist"
+        notes: "Pour review légal et contrats"
+      
+      - condition: "Application permis"
+        target_agent_id: "permits_specialist"
+        notes: "Pour soumission permis municipaux"
+      
+      - condition: "Collaboration marketing"
+        target_agent_id: "marketing_director"
+        notes: "Si projet immobilier à vendre"
+      
+      - condition: "Aspects financiers complexes"
+        target_agent_id: "finance_director"
+        notes: "Pour financement et cash flow"
+    
+    kpis:
+      - "% projets livrés dans les délais"
+      - "% projets dans le budget (±5%)"
+      - "Taux de conformité réglementaire (100%)"
+      - "Score satisfaction client (>4.5/5)"
+      - "Nombre incidents sécurité (objectif: 0)"
+      - "% permis approuvés première soumission"
+      - "Temps moyen approbation permis"
+      - "ROI moyen des projets immobiliers"
+    
+    llm_model: "claude-opus-4-20250514"
+    
+    system_prompt: |
+      Tu es le Construction Director de ROADY, expert en gestion de projets de 
+      construction et développement immobilier.
+      
+      TON RÔLE:
+      - Coordonner projets construction de A à Z
+      - Assurer conformité codes et règlements
+      - Gérer budgets et timelines
+      - Superviser 15 spécialistes (architectes, ingénieurs, etc.)
+      - Garantir qualité et sécurité
+      
+      EXPERTISE:
+      - Codes du bâtiment (résidentiel, commercial, industriel)
+      - Gestion de projet construction (PMI, Lean Construction)
+      - Estimation et contrôle des coûts
+      - Permis et conformité réglementaire
+      - Coordination multidisciplinaire
+      - Risk management construction
+      - BIM et technologies construction
+      
+      WORKFLOW TYPIQUE:
+      1. Analyse brief et faisabilité
+      2. Délègue design à Architect
+      3. Coordonne engineering (structural, MEP)
+      4. Obtient estimations (Cost Estimator)
+      5. Développe planning (Construction Scheduler)
+      6. Gère permis (Permits Specialist)
+      7. Supervise construction (Site Manager)
+      8. Quality control (Building Inspector)
+      9. Livraison et close-out
+      
+      TOUJOURS:
+      - Vérifie conformité codes AVANT de procéder
+      - Considère sécurité comme priorité #1
+      - Documente tout (pour traçabilité légale)
+      - Coordonne avec Legal Director pour contrats
+      - Update budget et timeline régulièrement
+      - Communique proactivement avec client
+      
+      DÉLÉGATION:
+      - Architecture/design → Architect, Interior Designer
+      - Engineering → Structural, Electrical, Plumbing Engineers
+      - Planning/coûts → Construction PM, Cost Estimator, Scheduler
+      - Conformité → Permits Specialist, Building Inspector
+      - Légal → Construction Legal Specialist
+      - Sustainability → Sustainability Consultant
+      - Immobilier → Real Estate Analyst
+      
+      Tu es méthodique, orienté détails, et obsédé par la qualité et conformité.
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # L2 SPECIALISTS - CONSTRUCTION & REAL ESTATE (15 agents)
+  # ═══════════════════════════════════════════════════════════════════════
+
+  l2_specialists:
+    department: "Construction & Real Estate"
+    total_agents: 15
+    reports_to: "construction_director"
+    
+    agents:
+      
+      # ─────────────────────────────────────────────────────────────────
+      # DESIGN & ARCHITECTURE (2 agents)
+      # ─────────────────────────────────────────────────────────────────
+      
+      - agent_id: "architect"
+        agent_name: "Architect"
+        level: 2
+        reports_to: "construction_director"
+        specialty: "Architecture et design de bâtiments"
+        role_summary: "Conçoit plans architecturaux, élévations, coupes. Design conforme aux codes."
+        tools: ["autocad", "revit", "sketchup", "archicad", "rendering_software"]
+        llm_model: "claude-opus-4-20250514"
+        tasks:
+          - "Conception architecturale"
+          - "Plans de construction (floor plans, elevations, sections)"
+          - "Design conforme aux codes du bâtiment"
+          - "Coordination avec ingénieurs"
+          - "3D renderings et visualisations"
+          - "Spécifications matériaux"
+          - "Design review et révisions"
+        expertise:
+          - "Codes du bâtiment résidentiel/commercial"
+          - "Design durable et écoénergétique"
+          - "Accessibilité universelle"
+          - "BIM (Building Information Modeling)"
+          - "Zoning et règlements municipaux"
+      
+      - agent_id: "interior_designer"
+        agent_name: "Interior Designer"
+        level: 2
+        reports_to: "construction_director"
+        specialty: "Design d'intérieur et aménagement"
+        role_summary: "Design intérieurs, sélection matériaux, mobilier, finitions"
+        tools: ["sketchup", "3ds_max", "mood_board_tools", "material_libraries"]
+        llm_model: "claude-sonnet-4-20250514"
+        tasks:
+          - "Concept design intérieur"
+          - "Plans d'aménagement"
+          - "Sélection matériaux et finitions"
+          - "Palette de couleurs"
+          - "Spécifications mobilier et fixtures"
+          - "3D renderings intérieurs"
+          - "Coordination avec architecte"
+        expertise:
+          - "Ergonomie et flow spatial"
+          - "Tendances design"
+          - "Matériaux durables"
+          - "Lighting design"
+          - "Codes de sécurité intérieure"
+      
+      # ─────────────────────────────────────────────────────────────────
+      # ENGINEERING (3 agents)
+      # ─────────────────────────────────────────────────────────────────
+      
+      - agent_id: "structural_engineer"
+        agent_name: "Structural Engineer"
+        level: 2
+        reports_to: "construction_director"
+        specialty: "Ingénierie structurale"
+        role_summary: "Calculs structure, plans engineering, conformité codes structure"
+        tools: ["etabs", "sap2000", "structural_analysis_software", "autocad"]
+        llm_model: "claude-opus-4-20250514"
+        tasks:
+          - "Calculs structuraux (charges, moments, etc.)"
+          - "Design fondations"
+          - "Design charpente (bois, acier, béton)"
+          - "Plans engineering structural"
+          - "Vérification conformité codes structure"
+          - "Analyse sismique si applicable"
+          - "Coordination avec architecte"
+        expertise:
+          - "Codes du bâtiment (structure)"
+          - "Matériaux construction (béton, acier, bois)"
+          - "Calculs charges et résistance"
+          - "Design parasismique"
+          - "Renforcement structures existantes"
+        notes: |
+          IMPORTANT: Recommande toujours validation par ingénieur P.Eng. 
+          certifié pour plans officiels et sceau professionnel.
+      
+      - agent_id: "electrical_engineer"
+        agent_name: "Electrical Engineer"
+        level: 2
+        reports_to: "construction_director"
+        specialty: "Systèmes électriques"
+        role_summary: "Design systèmes électriques, conformité Code électrique"
+        tools: ["autocad_electrical", "revit_mep", "electrical_calc_tools"]
+        llm_model: "claude-sonnet-4-20250514"
+        tasks:
+          - "Design système électrique"
+          - "Calculs charges électriques"
+          - "Plans électriques (single-line, panels)"
+          - "Spécifications équipements"
+          - "Conformité Code électrique"
+          - "Design éclairage"
+          - "Systèmes domotique si applicable"
+        expertise:
+          - "Code électrique (CE, NEC)"
+          - "Design panneaux électriques"
+          - "Calculs amperage et circuits"
+          - "Systèmes d'urgence et backup"
+          - "Efficacité énergétique"
+      
+      - agent_id: "plumbing_hvac_engineer"
+        agent_name: "Plumbing & HVAC Engineer"
+        level: 2
+        reports_to: "construction_director"
+        specialty: "Plomberie et systèmes HVAC"
+        role_summary: "Design plomberie, chauffage, ventilation, climatisation"
+        tools: ["revit_mep", "autocad_mep", "hvac_load_calc", "plumbing_design_tools"]
+        llm_model: "claude-sonnet-4-20250514"
+        tasks:
+          - "Design système plomberie"
+          - "Design système HVAC (chauffage/ventilation/AC)"
+          - "Calculs charges thermiques"
+          - "Sélection équipements (chaudière, AC, etc.)"
+          - "Plans plomberie et HVAC"
+          - "Conformité codes plomberie"
+          - "Efficacité énergétique systèmes"
+        expertise:
+          - "Codes plomberie"
+          - "Systèmes HVAC résidentiels/commerciaux"
+          - "Calculs charges de chauffage/cooling"
+          - "Systèmes géothermiques"
+          - "Ventilation et qualité air"
+      
+      # ─────────────────────────────────────────────────────────────────
+      # PROJECT MANAGEMENT & PLANNING (3 agents)
+      # ─────────────────────────────────────────────────────────────────
+      
+      - agent_id: "construction_project_manager"
+        agent_name: "Construction Project Manager"
+        level: 2
+        reports_to: "construction_director"
+        specialty: "Gestion de projet construction"
+        role_summary: "Gère projet au quotidien, coordination, suivi avancement"
+        tools: ["procore", "autodesk_construction_cloud", "ms_project", "clickup"]
+        llm_model: "claude-sonnet-4-20250514"
+        tasks:
+          - "Planning quotidien du projet"
+          - "Coordination trades et sous-traitants"
+          - "Suivi avancement vs timeline"
+          - "Gestion des changements (change orders)"
+          - "Meetings de chantier"
+          - "Communication avec client"
+          - "Résolution problèmes terrain"
+          - "Documentation et photos progrès"
+        expertise:
+          - "Gestion de projet (PMI, Agile Construction)"
+          - "Coordination multi-trades"
+          - "Gestion des risques"
+          - "Lean Construction"
+          - "Communication stakeholders"
+      
+      - agent_id: "cost_estimator"
+        agent_name: "Cost Estimator"
+        level: 2
+        reports_to: "construction_director"
+        specialty: "Estimation des coûts"
+        role_summary: "Estime coûts construction, budgets détaillés, value engineering"
+        tools: ["sage_estimating", "planswift", "on_screen_takeoff", "cost_databases"]
+        llm_model: "claude-sonnet-4-20250514"
+        tasks:
+          - "Estimation préliminaire des coûts"
+          - "Detailed cost breakdown (trades, matériaux, labour)"
+          - "Quantity takeoffs (quantitatifs)"
+          - "Budget tracking et contrôle"
+          - "Value engineering (optimisation coûts)"
+          - "Cost-benefit analysis"
+          - "Contingency planning"
+        expertise:
+          - "RSMeans et cost databases"
+          - "Quantity surveying"
+          - "Pricing matériaux et labour"
+          - "Value engineering"
+          - "Cost control methods"
+      
+      - agent_id: "construction_scheduler"
+        agent_name: "Construction Scheduler"
+        level: 2
+        reports_to: "construction_director"
+        specialty: "Planning et scheduling"
+        role_summary: "Crée timelines détaillés, CPM scheduling, gestion des délais"
+        tools: ["primavera_p6", "ms_project", "asta_powerproject", "gantt_tools"]
+        llm_model: "claude-sonnet-4-20250514"
+        tasks:
+          - "Développement master schedule"
+          - "CPM (Critical Path Method) scheduling"
+          - "Lookahead scheduling (2-6 semaines)"
+          - "Resource leveling"
+          - "Analyse impacts délais"
+          - "Recovery schedules si retards"
+          - "Coordination avec sous-traitants"
+        expertise:
+          - "CPM scheduling"
+          - "Primavera P6"
+          - "Construction sequencing"
+          - "Resource management"
+          - "Schedule compression techniques"
+      
+      # ─────────────────────────────────────────────────────────────────
+      # COMPLIANCE & LEGAL (3 agents)
+      # ─────────────────────────────────────────────────────────────────
+      
+      - agent_id: "permits_specialist"
+        agent_name: "Permits Specialist"
+        level: 2
+        reports_to: "construction_director"
+        specialty: "Permis et approbations"
+        role_summary: "Gère applications permis, inspections, conformité municipale"
+        tools: ["permits_portal", "municipal_portals", "code_checkers", "submission_tools"]
+        llm_model: "claude-sonnet-4-20250514"
+        tasks:
+          - "Préparation dossiers de permis"
+          - "Soumission applications (building permit, plumbing, electrical)"
+          - "Suivi approbations"
+          - "Coordination inspections municipales"
+          - "Gestion des conditions de permis"
+          - "Certificats d'occupation"
+          - "Zoning applications si nécessaire"
+        expertise:
+          - "Processus permis municipaux"
+          - "Codes du bâtiment et zoning"
+          - "Requirements documentation"
+          - "Relations avec inspecteurs"
+          - "Variances et exemptions"
+      
+      - agent_id: "construction_legal_specialist"
+        agent_name: "Construction Legal Specialist"
+        level: 2
+        reports_to: "construction_director"
+        specialty: "Aspects légaux construction"
+        role_summary: "Contrats construction, liability, conformité légale"
+        tools: ["contract_templates", "legal_databases", "docusign", "lien_management"]
+        llm_model: "claude-sonnet-4-20250514"
+        tasks:
+          - "Review contrats construction"
+          - "Contrats sous-traitants"
+          - "Gestion des liens (mechanic's liens)"
+          - "Insurance et bonding requirements"
+          - "Dispute resolution"
+          - "Compliance légale"
+          - "Change orders légalement valides"
+        expertise:
+          - "Droit de la construction"
+          - "Contrats (CCDC, AIA, etc.)"
+          - "Liability et insurance"
+          - "Mechanic's liens"
+          - "Construction law"
+        notes: |
+          Collabore étroitement avec Legal Director pour aspects 
+          complexes. Recommande avocat spécialisé pour litiges.
+      
+      - agent_id: "building_inspector"
+        agent_name: "Building Inspector"
+        level: 2
+        reports_to: "construction_director"
+        specialty: "Inspection et quality control"
+        role_summary: "Inspections quality, conformité plans, punch lists"
+        tools: ["inspection_checklists", "bluebeam", "photo_documentation", "deficiency_tracking"]
+        llm_model: "claude-sonnet-4-20250514"
+        tasks:
+          - "Inspections de conformité (plans vs réalité)"
+          - "Quality control checks"
+          - "Pre-inspection walkthroughs"
+          - "Punch lists et déficiences"
+          - "Final inspections"
+          - "Documentation photo"
+          - "Coordination avec inspecteurs municipaux"
+        expertise:
+          - "Codes du bâtiment (inspection)"
+          - "Quality control construction"
+          - "Deficiency management"
+          - "Best practices construction"
+          - "Safety compliance"
+      
+      # ─────────────────────────────────────────────────────────────────
+      # SPECIALIZED ROLES (4 agents)
+      # ─────────────────────────────────────────────────────────────────
+      
+      - agent_id: "quantity_surveyor"
+        agent_name: "Quantity Surveyor"
+        level: 2
+        reports_to: "construction_director"
+        specialty: "Métrés et quantitatifs"
+        role_summary: "Calculs quantités matériaux, measurements, cost planning"
+        tools: ["on_screen_takeoff", "planswift", "bluebeam", "measurement_tools"]
+        llm_model: "claude-sonnet-4-20250514"
+        tasks:
+          - "Quantity takeoffs (material quantities)"
+          - "Measurements précis des plans"
+          - "Bill of quantities (BOQ)"
+          - "Cost planning"
+          - "Valuations et progress payments"
+          - "Final account preparation"
+        expertise:
+          - "Measurement standards"
+          - "Quantity surveying methods"
+          - "Cost planning"
+          - "Valuations"
+          - "Contract administration"
+      
+      - agent_id: "sustainability_consultant"
+        agent_name: "Sustainability Consultant"
+        level: 2
+        reports_to: "construction_director"
+        specialty: "Construction durable et LEED"
+        role_summary: "Green building, certifications LEED, efficacité énergétique"
+        tools: ["leed_tools", "energy_modeling", "green_building_databases"]
+        llm_model: "claude-sonnet-4-20250514"
+        tasks:
+          - "Stratégie construction durable"
+          - "Certifications LEED / BREEAM"
+          - "Energy modeling"
+          - "Sélection matériaux éco"
+          - "Water efficiency strategies"
+          - "Indoor environmental quality"
+          - "Innovation credits LEED"
+        expertise:
+          - "LEED certification"
+          - "Green building practices"
+          - "Energy efficiency"
+          - "Sustainable materials"
+          - "Life cycle assessment"
+      
+      - agent_id: "real_estate_analyst"
+        agent_name: "Real Estate Analyst"
+        level: 2
+        reports_to: "construction_director"
+        specialty: "Analyse immobilière"
+        role_summary: "Faisabilité projets, valuations, market analysis immobilier"
+        tools: ["argus", "real_estate_databases", "financial_modeling", "market_data"]
+        llm_model: "claude-sonnet-4-20250514"
+        tasks:
+          - "Analyse de faisabilité projets"
+          - "Property valuations"
+          - "Market analysis immobilier"
+          - "Highest and best use analysis"
+          - "Investment analysis (ROI, IRR, NPV)"
+          - "Comparative market analysis (CMA)"
+          - "Development pro formas"
+        expertise:
+          - "Real estate valuation"
+          - "Market analysis"
+          - "Investment analysis"
+          - "Development feasibility"
+          - "Property economics"
+      
+      - agent_id: "site_manager"
+        agent_name: "Site Manager"
+        level: 2
+        reports_to: "construction_director"
+        specialty: "Gestion de chantier"
+        role_summary: "Supervision quotidienne chantier, sécurité, coordination terrain"
+        tools: ["procore", "site_diary", "safety_checklists", "mobile_reporting"]
+        llm_model: "claude-sonnet-4-20250514"
+        tasks:
+          - "Supervision quotidienne travaux"
+          - "Sécurité chantier (safety compliance)"
+          - "Coordination des trades sur site"
+          - "Site logistics et accès"
+          - "Daily reports et documentation"
+          - "Gestion des livraisons matériaux"
+          - "Problem solving temps réel"
+        expertise:
+          - "Site management"
+          - "Safety management (OSHA, CNESST)"
+          - "Trade coordination"
+          - "Logistics"
+          - "Field problem solving"
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # WORKFLOWS CONSTRUCTION
+  # ═══════════════════════════════════════════════════════════════════════
+
+  construction_workflows:
+    
+    # ─────────────────────────────────────────────────────────────────────
+    # WORKFLOW 1: RÉNOVATION RÉSIDENTIELLE
+    # ─────────────────────────────────────────────────────────────────────
+    
+    residential_renovation_workflow:
+      name: "Rénovation résidentielle (ex: cuisine, salle de bain, extension)"
+      exemple: "Rénove ma cuisine - budget $50K"
+      
+      flow:
+        
+        phase_1_discovery:
+          - agent: "human_owner"
+            action: "Demande rénovation"
+            provides:
+              - "Type de rénovation"
+              - "Budget approximatif"
+              - "Timeline souhaité"
+              - "Photos/plans actuels si disponibles"
+          
+          - agent: "core_orchestrator"
+            decision: "Route vers Construction Director"
+          
+          - agent: "construction_director"
+            action: "Analyse initiale et faisabilité"
+            
+            parallel_tasks:
+              - agent: "architect"
+                task: "Site visit (virtuel via photos ou sur place)"
+                output: "Assessment initial"
+              
+              - agent: "real_estate_analyst"
+                task: "Value impact analysis"
+                output: "ROI estimation"
+              
+              - agent: "cost_estimator"
+                task: "Rough order of magnitude (ROM) budget"
+                output: "Budget range estimation"
+          
+          - agent: "construction_director"
+            creates: "Feasibility report"
+            presents_to: "user_experience_director"
+        
+        phase_2_design:
+          - agent: "user_experience_director"
+            action: "Obtient GO du client pour design"
+          
+          - agent: "construction_director"
+            delegates:
+              
+              design_team:
+                - agent: "architect"
+                  task: "Conception plans rénovation"
+                  creates: ["Floor plans", "Elevations"]
+                
+                - agent: "interior_designer"
+                  task: "Design intérieur et finitions"
+                  creates: ["Mood boards", "Material selections", "3D renderings"]
+                
+                - agent: "structural_engineer"
+                  if: "murs porteurs impliqués"
+                  task: "Engineering structural si nécessaire"
+                  creates: "Structural plans"
+          
+          - agent: "user_experience_director"
+            presents: "Design concepts (3 options)"
+            user_selects: "Option préférée"
+          
+          - agent: "architect"
+            action: "Raffine design selon feedback"
+            output: "Final design package"
+        
+        phase_3_budgeting_planning:
+          
+          - agent: "cost_estimator"
+            task: "Detailed cost estimate"
+            breakdown:
+              - "Labour costs"
+              - "Materials"
+              - "Permits"
+              - "Contingency (10-15%)"
+            output: "Detailed budget"
+          
+          - agent: "quantity_surveyor"
+            task: "Quantity takeoffs"
+            output: "Bill of quantities"
+          
+          - agent: "construction_scheduler"
+            task: "Project timeline"
+            creates: "Schedule avec milestones"
+          
+          - agent: "construction_director"
+            aggregates: "Budget + Timeline + Design"
+            presents: "Complete project package"
+          
+          - agent: "user_experience_director"
+            presents_to_client:
+              - "Final design"
+              - "Detailed budget"
+              - "Timeline (ex: 8-12 semaines)"
+              - "Scope of work"
+            
+            options:
+              - "✅ Approuver et procéder"
+              - "🔧 Ajuster budget/scope"
+              - "🔄 Value engineering (réduire coûts)"
+        
+        phase_4_permits_contracts:
+          
+          - agent: "permits_specialist"
+            task: "Prépare et soumet permis"
+            submits:
+              - "Building permit"
+              - "Electrical permit si applicable"
+              - "Plumbing permit si applicable"
+            timeline: "2-4 semaines approbation"
+          
+          - agent: "construction_legal_specialist"
+            task: "Prépare contrats"
+            creates:
+              - "Contrat principal"
+              - "Scope of work détaillé"
+              - "Payment schedule"
+              - "Change order process"
+          
+          - agent: "construction_director"
+            coordinates: "Insurance et bonding si requis"
+        
+        phase_5_construction:
+          
+          - agent: "construction_project_manager"
+            role: "Day-to-day project management"
+            
+            tasks:
+              - "Coordination des trades"
+              - "Material procurement"
+              - "Quality control"
+              - "Progress tracking"
+              - "Client updates (weekly)"
+          
+          - agent: "site_manager"
+            role: "On-site supervision"
+            ensures:
+              - "Safety compliance"
+              - "Work quality"
+              - "Schedule adherence"
+              - "Problem resolution"
+          
+          - agent: "building_inspector"
+            performs:
+              - "Rough-in inspections"
+              - "Quality checks"
+              - "Progress verifications"
+          
+          - agent: "permits_specialist"
+            coordinates: "Municipal inspections"
+            stages:
+              - "Framing inspection"
+              - "Rough-in (electrical/plumbing)"
+              - "Insulation"
+              - "Final inspection"
+        
+        phase_6_completion:
+          
+          - agent: "building_inspector"
+            creates: "Punch list (déficiences)"
+          
+          - agent: "construction_project_manager"
+            ensures: "Punch list completion"
+          
+          - agent: "building_inspector"
+            performs: "Final walkthrough"
+            confirms: "Substantial completion"
+          
+          - agent: "permits_specialist"
+            obtains: "Certificate of occupancy"
+          
+          - agent: "construction_director"
+            delivers:
+              - "Final project documentation"
+              - "Warranties"
+              - "Maintenance guides"
+              - "As-built drawings"
+          
+          - agent: "user_experience_director"
+            collects: "Client satisfaction feedback"
+          
+          - agent: "core_orchestrator"
+            logs: "Complete project to TR_Log"
+            updates: "ClickUp project as complete"
+
+    # ─────────────────────────────────────────────────────────────────────
+    # WORKFLOW 2: NOUVELLE CONSTRUCTION RÉSIDENTIELLE
+    # ─────────────────────────────────────────────────────────────────────
+    
+    new_home_construction_workflow:
+      name: "Construction maison neuve"
+      exemple: "Construis-moi une maison sur mon terrain"
+      
+      flow:
+        
+        phase_1_feasibility:
+          - agent: "construction_director"
+            coordinates:
+              
+              - agent: "real_estate_analyst"
+                task: "Site analysis et due diligence"
+                analyzes:
+                  - "Zoning regulations"
+                  - "Setbacks et restrictions"
+                  - "Site access"
+                  - "Utilities availability"
+                  - "Topographie"
+                output: "Site feasibility report"
+              
+              - agent: "architect"
+                task: "Preliminary design options"
+                considers:
+                  - "Site constraints"
+                  - "Client program (# rooms, sqft, etc.)"
+                  - "Budget rough estimate"
+                output: "3 conceptual designs"
+              
+              - agent: "cost_estimator"
+                task: "Budget per sqft analysis"
+                estimates: "Total project cost range"
+              
+              - agent: "sustainability_consultant"
+                if: "client wants green home"
+                task: "Sustainability strategy"
+                recommends: "Green features et LEED potential"
+        
+        phase_2_design_development:
+          
+          - agent: "architect"
+            develops: "Schematic design"
+            creates:
+              - "Floor plans"
+              - "Elevations (4 sides)"
+              - "Site plan"
+              - "3D renderings"
+          
+          - agent: "interior_designer"
+            develops: "Interior concept"
+          
+          - agent: "structural_engineer"
+            task: "Preliminary structural concept"
+          
+          - agent: "electrical_engineer"
+            task: "Electrical system design"
+          
+          - agent: "plumbing_hvac_engineer"
+            task: "MEP systems design"
+          
+          - agent: "construction_director"
+            presents: "Design package complet"
+          
+          - iterations: "2-3 rounds de révisions avec client"
+        
+        phase_3_detailed_design:
+          
+          - agent: "architect"
+            creates: "Construction documents"
+            includes:
+              - "Detailed floor plans"
+              - "Elevations"
+              - "Sections"
+              - "Details"
+              - "Specifications"
+          
+          - agent: "structural_engineer"
+            creates: "Structural drawings"
+            signs: "Sealed by P.Eng."
+          
+          - agent: "electrical_engineer"
+            creates: "Electrical drawings"
+          
+          - agent: "plumbing_hvac_engineer"
+            creates: "MEP drawings"
+          
+          - agent: "cost_estimator"
+            produces: "Final detailed estimate"
+          
+          - agent: "construction_scheduler"
+            creates: "Master construction schedule"
+            timeline: "Typically 8-14 months"
+        
+        phase_4_permits_tendering:
+          
+          - agent: "permits_specialist"
+            submits: "Building permit package"
+            includes_all: "Architectural + Engineering drawings"
+            timeline: "4-8 semaines approbation"
+          
+          - agent: "construction_legal_specialist"
+            prepares:
+              - "Construction contracts"
+              - "Tender documents si applicable"
+          
+          - agent: "construction_project_manager"
+            if: "general contractor needed"
+            task: "Tender process et contractor selection"
+        
+        phase_5_construction:
+          
+          stages:
+            - stage: "Site preparation"
+              duration: "2-4 semaines"
+              tasks: ["Excavation", "Footings", "Foundation"]
+            
+            - stage: "Framing"
+              duration: "4-8 semaines"
+              tasks: ["Framing", "Roof", "Windows/Doors"]
+            
+            - stage: "Rough-ins"
+              duration: "4-6 semaines"
+              tasks: ["Electrical rough-in", "Plumbing rough-in", "HVAC"]
+            
+            - stage: "Insulation & Drywall"
+              duration: "3-4 semaines"
+            
+            - stage: "Finishes"
+              duration: "6-10 semaines"
+              tasks: ["Flooring", "Cabinets", "Trim", "Painting", "Fixtures"]
+            
+            - stage: "Final"
+              duration: "2-3 semaines"
+              tasks: ["Landscaping", "Punch list", "Final cleaning"]
+          
+          - agent: "construction_project_manager"
+            manages: "Overall project execution"
+          
+          - agent: "site_manager"
+            supervises: "Daily site operations"
+          
+          - agent: "building_inspector"
+            performs: "Quality inspections at each stage"
+          
+          - agent: "permits_specialist"
+            coordinates: "Municipal inspections"
+        
+        phase_6_closeout:
+          
+          - agent: "building_inspector"
+            creates: "Final punch list"
+          
+          - agent: "construction_project_manager"
+            ensures: "All items completed"
+          
+          - agent: "permits_specialist"
+            obtains:
+              - "Final inspection approval"
+              - "Certificate of occupancy"
+          
+          - agent: "construction_director"
+            delivers:
+              - "As-built drawings"
+              - "Warranties (roof, HVAC, etc.)"
+              - "Maintenance manuals"
+              - "Final accounting"
+          
+          - agent: "real_estate_analyst"
+            if: "investment property"
+            provides: "Final valuation report"
+
+    # ─────────────────────────────────────────────────────────────────────
+    # WORKFLOW 3: PROJET COMMERCIAL
+    # ─────────────────────────────────────────────────────────────────────
+    
+    commercial_construction_workflow:
+      name: "Construction commerciale (bureau, retail, etc.)"
+      exemple: "Construis un immeuble de bureaux 3 étages"
+      
+      additional_complexity:
+        - "Plus de regulatory compliance"
+        - "Accessibility requirements plus stricts"
+        - "Fire safety systems complexes"
+        - "MEP systems plus sophistiqués"
+        - "Parking requirements"
+        - "Commercial codes vs residential"
+      
+      additional_specialists:
+        - agent: "fire_protection_engineer"
+          note: "Pourrait être ajouté comme L2 agent supplémentaire"
+        
+        - agent: "accessibility_consultant"
+          note: "Expertise ADA/accessibility compliance"
+        
+        - agent: "traffic_consultant"
+          note: "Pour études d'impact traffic"
+      
+      process: "Similar to new_home_construction but avec:"
+        - "More stakeholders (municipal, community)"
+        - "More complex approvals (zoning, variances)"
+        - "Longer timelines (12-24+ months)"
+        - "Higher budgets"
+        - "More engineering complexity"
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # INTÉGRATIONS AVEC AUTRES DÉPARTEMENTS
+  # ═══════════════════════════════════════════════════════════════════════
+
+  cross_department_integrations:
+    
+    with_legal_director:
+      scenarios:
+        - "Review de tous les contrats construction"
+        - "Disputes avec contractors"
+        - "Lien management"
+        - "Insurance claims"
+      process: |
+        Construction Director → Legal Director
+        Construction Legal Specialist ↔ Contract Specialist
+    
+    with_finance_director:
+      scenarios:
+        - "Project financing"
+        - "Progress payments et draw schedules"
+        - "Cash flow management"
+        - "Final accounting"
+      process: |
+        Construction Director → Finance Director
+        Cost Estimator ↔ Financial Analyst
+        Construction PM ↔ Accountant (pour invoicing)
+    
+    with_marketing_director:
+      scenarios:
+        - "Si projet immobilier à vendre (condos, etc.)"
+        - "Marketing de projets de développement"
+        - "Pre-sales"
+      process: |
+        Construction Director → Marketing Director
+        Real Estate Analyst ↔ Marketing Analyst
+    
+    with_operations_director:
+      scenarios:
+        - "Process optimization construction"
+        - "Vendor management"
+        - "Supply chain pour matériaux"
+      process: |
+        Construction Director → Operations Director
+        Construction PM ↔ Supply Chain Manager
+    
+    with_data_director:
+      scenarios:
+        - "Project analytics et reporting"
+        - "Historical cost data"
+        - "Performance metrics"
+      process: |
+        Construction Director → Data Director
+        Cost Estimator ↔ Data Analyst (pour cost databases)
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # OUTILS ET TECHNOLOGIES
+  # ═══════════════════════════════════════════════════════════════════════
+
+  tools_ecosystem:
+    
+    design_tools:
+      - "AutoCAD - 2D drafting"
+      - "Revit - BIM modeling"
+      - "SketchUp - 3D modeling"
+      - "Archicad - Architecture BIM"
+      - "Rhino + Grasshopper - Parametric design"
+      - "Lumion - Rendering"
+      - "Enscape - Real-time visualization"
+    
+    engineering_tools:
+      - "ETABS - Structural analysis"
+      - "SAP2000 - Structural analysis"
+      - "AutoCAD MEP - MEP design"
+      - "Revit MEP - MEP BIM"
+      - "Carrier HAP - HVAC load calculations"
+    
+    project_management:
+      - "Procore - #1 construction PM platform"
+      - "Autodesk Construction Cloud (BIM 360)"
+      - "Primavera P6 - Enterprise scheduling"
+      - "MS Project - Scheduling"
+      - "Buildertrend - Residential construction"
+    
+    cost_estimation:
+      - "Sage Estimating"
+      - "PlanSwift - On-screen takeoff"
+      - "Bluebeam Revu - PDF markup & takeoff"
+      - "RSMeans Data - Cost databases"
+    
+    collaboration:
+      - "BIM 360 - Cloud collaboration"
+      - "Bluebeam Studio - Drawing collaboration"
+      - "Fieldwire - Field management"
+    
+    compliance:
+      - "Municipal permit portals"
+      - "Code checking software"
+      - "ICC Codes (International Code Council)"
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # KPIS ET MÉTRIQUES
+  # ═══════════════════════════════════════════════════════════════════════
+
+  department_kpis:
+    
+    project_performance:
+      - name: "On-time delivery rate"
+        target: ">90%"
+        measurement: "% projects completed within timeline"
+      
+      - name: "On-budget delivery rate"
+        target: ">85%"
+        measurement: "% projects within ±5% of budget"
+      
+      - name: "Change order rate"
+        target: "<10%"
+        measurement: "% change orders vs original contract value"
+    
+    quality:
+      - name: "First-time permit approval rate"
+        target: ">80%"
+        measurement: "% permits approved without resubmission"
+      
+      - name: "Punch list items per project"
+        target: "<50 items"
+        measurement: "Average number of deficiencies"
+      
+      - name: "Client satisfaction"
+        target: ">4.5/5"
+        measurement: "Average client rating"
+    
+    safety:
+      - name: "Safety incidents"
+        target: "0"
+        measurement: "Number of reportable incidents"
+      
+      - name: "Safety compliance rate"
+        target: "100%"
+        measurement: "% sites passing safety audits"
+    
+    financial:
+      - name: "Cost variance"
+        target: "±3%"
+        measurement: "Actual vs estimated costs"
+      
+      - name: "ROI (for development projects)"
+        target: ">15%"
+        measurement: "Return on investment"
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # NOTES D'IMPLÉMENTATION
+  # ═══════════════════════════════════════════════════════════════════════
+
+  implementation_notes:
+    
+    critical_success_factors:
+      - "Conformité codes TOUJOURS priorité #1"
+      - "Documentation exhaustive (protection légale)"
+      - "Communication client fréquente (weekly minimum)"
+      - "Safety culture strong"
+      - "Quality over speed"
+      - "Realistic estimates (avoid over-promising)"
+    
+    common_pitfalls_to_avoid:
+      - "Under-estimating complexity ou costs"
+      - "Skipping proper permits (JAMAIS faire ça)"
+      - "Poor communication avec client"
+      - "Ignorer codes du bâtiment"
+      - "Inadequate contingency planning"
+      - "Rushing design phase"
+    
+    best_practices:
+      - "Front-load planning (fail to plan = plan to fail)"
+      - "Regular site visits et inspections"
+      - "Maintain as-built drawings en temps réel"
+      - "Document everything (photos, reports, emails)"
+      - "Proactive problem solving"
+      - "Build strong vendor/contractor relationships"
+    
+    legal_disclaimers:
+      - note: |
+          IMPORTANT: ROADY Construction module fournit assistance 
+          et coordination, mais:
+          
+          - Plans officiels DOIVENT être scellés par P.Eng. licencié
+          - Permis soumis par owner ou contractor licencié
+          - Construction exécutée par contractors licenciés
+          - Inspections finales par inspecteurs municipaux
+          - Legal contracts reviewed par avocat si complexe
+          
+          ROADY accélère et facilite, mais ne remplace pas 
+          les professionnels certifiés requis par la loi.
+
+# ═══════════════════════════════════════════════════════════════════════════
+# STATISTIQUES MODULE
+# ═══════════════════════════════════════════════════════════════════════════
+
+module_statistics:
+  total_new_agents: 16
+  breakdown:
+    l1_directors: 1
+    l2_specialists: 15
+  
+  l2_by_category:
+    design_architecture: 2
+    engineering: 3
+    project_management: 3
+    compliance_legal: 3
+    specialized: 4
+  
+  llm_distribution:
+    claude_opus_4: 3    # Construction Director, Architect, Structural Engineer
+    claude_sonnet_4: 13  # Tous les autres
+  
+  workflows_defined: 3
+    - "Residential renovation"
+    - "New home construction"
+    - "Commercial construction"
+  
+  integrations:
+    - "Legal Director"
+    - "Finance Director"
+    - "Marketing Director"
+    - "Operations Director"
+    - "Data Director"
+  
+  tools_integrated: 25+
+  
+  estimated_value:
+    cost_savings: "30-40% vs traditional architects/PMs"
+    time_savings: "50% faster planning phase"
+    quality_improvement: "Fewer errors due to coordination"
+    
+# ═══════════════════════════════════════════════════════════════════════════
+# FIN DU MODULE CONSTRUCTION
+# ═══════════════════════════════════════════════════════════════════════════
