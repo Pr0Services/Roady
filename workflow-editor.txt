@@ -1,0 +1,221 @@
+/*
+╔══════════════════════════════════════════════════════════════════════════════╗
+║   🔄 ROADY - WORKFLOW EDITOR                                                 ║
+║   Visual workflow builder with drag & drop                                   ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+*/
+
+import React, { useState } from 'react';
+
+const STEP_TYPES = [
+  { id: 'start', name: 'Start', icon: '🚀', color: '#10b981', description: 'Workflow entry point' },
+  { id: 'task', name: 'Task', icon: '✅', color: '#6366f1', description: 'Assign a task to agent' },
+  { id: 'decision', name: 'Decision', icon: '🔀', color: '#f59e0b', description: 'Conditional branching' },
+  { id: 'ai', name: 'AI Process', icon: '🤖', color: '#8b5cf6', description: 'AI-powered processing' },
+  { id: 'approval', name: 'Approval', icon: '👍', color: '#ec4899', description: 'Human approval step' },
+  { id: 'notification', name: 'Notify', icon: '🔔', color: '#14b8a6', description: 'Send notification' },
+  { id: 'delay', name: 'Delay', icon: '⏱️', color: '#64748b', description: 'Wait for duration' },
+  { id: 'webhook', name: 'Webhook', icon: '🔗', color: '#0ea5e9', description: 'External API call' },
+  { id: 'end', name: 'End', icon: '🏁', color: '#ef4444', description: 'Workflow completion' }
+];
+
+const WorkflowEditor = ({ isOpen, onClose, onSave, existingWorkflow = null, agents = [], offices = [] }) => {
+  const [workflow, setWorkflow] = useState(existingWorkflow || {
+    id: `wf_${Date.now()}`, name: 'New Workflow', description: '', steps: [
+      { id: 'step_1', type: 'start', name: 'Start', x: 100, y: 200, config: {} }
+    ], connections: []
+  });
+  
+  const [selectedStep, setSelectedStep] = useState(null);
+  const [draggedType, setDraggedType] = useState(null);
+  const [showConfig, setShowConfig] = useState(false);
+
+  const addStep = (type, x = 300, y = 200) => {
+    const stepType = STEP_TYPES.find(t => t.id === type);
+    const newStep = {
+      id: `step_${Date.now()}`, type, name: stepType?.name || type,
+      x: x + workflow.steps.length * 50, y, config: {}
+    };
+    setWorkflow(prev => ({ ...prev, steps: [...prev.steps, newStep] }));
+    setSelectedStep(newStep.id);
+  };
+
+  const updateStep = (stepId, updates) => {
+    setWorkflow(prev => ({
+      ...prev,
+      steps: prev.steps.map(s => s.id === stepId ? { ...s, ...updates } : s)
+    }));
+  };
+
+  const deleteStep = (stepId) => {
+    if (stepId === 'step_1') return; // Can't delete start
+    setWorkflow(prev => ({
+      ...prev,
+      steps: prev.steps.filter(s => s.id !== stepId),
+      connections: prev.connections.filter(c => c.from !== stepId && c.to !== stepId)
+    }));
+    setSelectedStep(null);
+  };
+
+  const addConnection = (fromId, toId) => {
+    if (fromId === toId) return;
+    const exists = workflow.connections.some(c => c.from === fromId && c.to === toId);
+    if (!exists) {
+      setWorkflow(prev => ({
+        ...prev,
+        connections: [...prev.connections, { id: `conn_${Date.now()}`, from: fromId, to: toId }]
+      }));
+    }
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    if (draggedType) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      addStep(draggedType, e.clientX - rect.left - 60, e.clientY - rect.top - 30);
+      setDraggedType(null);
+    }
+  };
+
+  const selectedStepData = workflow.steps.find(s => s.id === selectedStep);
+  const selectedStepType = STEP_TYPES.find(t => t.id === selectedStepData?.type);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="we-overlay">
+      <div className="we-modal">
+        <header className="we-header">
+          <div className="we-header-left">
+            <span>🔄</span>
+            <input className="we-title-input" value={workflow.name} onChange={(e) => setWorkflow(p => ({...p, name: e.target.value}))} placeholder="Workflow name..." />
+          </div>
+          <div className="we-header-actions">
+            <button className="we-btn" onClick={() => onSave?.(workflow)}>💾 Save</button>
+            <button className="we-btn primary" onClick={() => console.log('Run workflow')}>▶️ Run</button>
+            <button className="we-close" onClick={onClose}>✕</button>
+          </div>
+        </header>
+
+        <div className="we-body">
+          {/* Toolbox */}
+          <aside className="we-toolbox">
+            <h3>🧰 Steps</h3>
+            <div className="we-step-types">
+              {STEP_TYPES.map(type => (
+                <div key={type.id} className="we-step-type" draggable onDragStart={() => setDraggedType(type.id)} onDragEnd={() => setDraggedType(null)} style={{'--step-color': type.color}}>
+                  <span className="we-step-icon">{type.icon}</span>
+                  <div><strong>{type.name}</strong><small>{type.description}</small></div>
+                </div>
+              ))}
+            </div>
+          </aside>
+
+          {/* Canvas */}
+          <main className="we-canvas" onDrop={handleDrop} onDragOver={(e) => e.preventDefault()}>
+            <svg className="we-connections">
+              {workflow.connections.map(conn => {
+                const from = workflow.steps.find(s => s.id === conn.from);
+                const to = workflow.steps.find(s => s.id === conn.to);
+                if (!from || !to) return null;
+                return (
+                  <g key={conn.id}>
+                    <line x1={from.x + 60} y1={from.y + 30} x2={to.x + 60} y2={to.y + 30} stroke="#6366f1" strokeWidth="2" markerEnd="url(#arrow)" />
+                  </g>
+                );
+              })}
+              <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#6366f1" /></marker></defs>
+            </svg>
+            
+            {workflow.steps.map(step => {
+              const stepType = STEP_TYPES.find(t => t.id === step.type);
+              return (
+                <div key={step.id} className={`we-step ${selectedStep === step.id ? 'selected' : ''}`} style={{ left: step.x, top: step.y, '--step-color': stepType?.color }} onClick={() => { setSelectedStep(step.id); setShowConfig(true); }}
+                  draggable onDrag={(e) => { if (e.clientX && e.clientY) { const rect = e.currentTarget.parentElement.getBoundingClientRect(); updateStep(step.id, { x: e.clientX - rect.left - 60, y: e.clientY - rect.top - 30 }); } }}>
+                  <span className="we-step-icon">{stepType?.icon}</span>
+                  <span className="we-step-name">{step.name}</span>
+                  <div className="we-step-ports">
+                    <div className="we-port in" onClick={(e) => { e.stopPropagation(); if (selectedStep && selectedStep !== step.id) addConnection(selectedStep, step.id); }}></div>
+                    <div className="we-port out" onClick={(e) => { e.stopPropagation(); setSelectedStep(step.id); }}></div>
+                  </div>
+                </div>
+              );
+            })}
+
+            {workflow.steps.length === 1 && (
+              <div className="we-canvas-hint"><span>🎯</span><p>Drag steps from the toolbox to build your workflow</p></div>
+            )}
+          </main>
+
+          {/* Config Panel */}
+          {showConfig && selectedStepData && (
+            <aside className="we-config">
+              <div className="we-config-header">
+                <span style={{background: selectedStepType?.color}}>{selectedStepType?.icon}</span>
+                <h3>{selectedStepData.name}</h3>
+                <button onClick={() => setShowConfig(false)}>✕</button>
+              </div>
+              
+              <div className="we-config-body">
+                <div className="we-field"><label>Step Name</label><input value={selectedStepData.name} onChange={(e) => updateStep(selectedStep, { name: e.target.value })} /></div>
+                
+                {selectedStepData.type === 'task' && (
+                  <>
+                    <div className="we-field"><label>Assign to Agent</label>
+                      <select value={selectedStepData.config?.agent || ''} onChange={(e) => updateStep(selectedStep, { config: { ...selectedStepData.config, agent: e.target.value } })}>
+                        <option value="">Select agent...</option>
+                        {agents.map(a => <option key={a.id} value={a.id}>{a.avatar} {a.name}</option>)}
+                      </select>
+                    </div>
+                    <div className="we-field"><label>Token Budget</label><input type="number" value={selectedStepData.config?.tokens || 5000} onChange={(e) => updateStep(selectedStep, { config: { ...selectedStepData.config, tokens: parseInt(e.target.value) } })} /></div>
+                  </>
+                )}
+                
+                {selectedStepData.type === 'ai' && (
+                  <>
+                    <div className="we-field"><label>AI Model</label>
+                      <select value={selectedStepData.config?.model || 'gpt-4o-mini'} onChange={(e) => updateStep(selectedStep, { config: { ...selectedStepData.config, model: e.target.value } })}>
+                        <option value="gpt-4o">GPT-4o</option><option value="gpt-4o-mini">GPT-4o Mini</option><option value="claude-3-sonnet">Claude 3 Sonnet</option>
+                      </select>
+                    </div>
+                    <div className="we-field"><label>Prompt</label><textarea value={selectedStepData.config?.prompt || ''} onChange={(e) => updateStep(selectedStep, { config: { ...selectedStepData.config, prompt: e.target.value } })} rows={4} placeholder="Enter AI prompt..." /></div>
+                  </>
+                )}
+                
+                {selectedStepData.type === 'decision' && (
+                  <div className="we-field"><label>Condition</label><input value={selectedStepData.config?.condition || ''} onChange={(e) => updateStep(selectedStep, { config: { ...selectedStepData.config, condition: e.target.value } })} placeholder="e.g., status === 'approved'" /></div>
+                )}
+                
+                {selectedStepData.type === 'delay' && (
+                  <div className="we-field"><label>Duration (minutes)</label><input type="number" value={selectedStepData.config?.duration || 5} onChange={(e) => updateStep(selectedStep, { config: { ...selectedStepData.config, duration: parseInt(e.target.value) } })} /></div>
+                )}
+                
+                {selectedStepData.type === 'notification' && (
+                  <>
+                    <div className="we-field"><label>Channel</label>
+                      <select value={selectedStepData.config?.channel || 'email'} onChange={(e) => updateStep(selectedStep, { config: { ...selectedStepData.config, channel: e.target.value } })}>
+                        <option value="email">📧 Email</option><option value="slack">💬 Slack</option><option value="push">🔔 Push</option>
+                      </select>
+                    </div>
+                    <div className="we-field"><label>Message</label><textarea value={selectedStepData.config?.message || ''} onChange={(e) => updateStep(selectedStep, { config: { ...selectedStepData.config, message: e.target.value } })} rows={3} /></div>
+                  </>
+                )}
+
+                {selectedStepData.type !== 'start' && (
+                  <button className="we-delete-btn" onClick={() => deleteStep(selectedStep)}>🗑️ Delete Step</button>
+                )}
+              </div>
+            </aside>
+          )}
+        </div>
+
+        <footer className="we-footer">
+          <div className="we-stats"><span>📊 {workflow.steps.length} steps</span><span>🔗 {workflow.connections.length} connections</span></div>
+          <div className="we-zoom"><button>−</button><span>100%</span><button>+</button></div>
+        </footer>
+      </div>
+    </div>
+  );
+};
+
+export default WorkflowEditor;

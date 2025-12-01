@@ -1,0 +1,464 @@
+/*
+╔══════════════════════════════════════════════════════════════════════════════╗
+║   🏦 ROADY - ACCOUNTING DEPARTMENT                                           ║
+║   Complete Financial Management System                                       ║
+║   Bookkeeping, Payroll, Invoicing, Sales, Reporting                         ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+*/
+
+import React, { useState, useMemo } from 'react';
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ACCOUNTING AGENT HIERARCHY
+// ═══════════════════════════════════════════════════════════════════════════
+
+export const ACCOUNTING_HIERARCHY = {
+  id: 'accounting_dept',
+  name: 'Accounting Department',
+  icon: '🏦',
+  description: 'Complete financial management and reporting',
+  
+  roles: [
+    // LEVEL 1 - LEADERSHIP
+    {
+      id: 'cfo',
+      name: 'Chief Financial Officer',
+      level: 1,
+      icon: '👔',
+      avatar: '💼',
+      department: 'Executive',
+      responsibilities: ['Financial strategy', 'Budget oversight', 'Investor relations', 'Risk management'],
+      reportsTo: null,
+      manages: ['controller', 'treasurer'],
+      skills: ['Strategic planning', 'Financial analysis', 'Leadership', 'Compliance'],
+      tokenBudget: 50000,
+      priority: 'critical'
+    },
+    
+    // LEVEL 2 - MANAGEMENT
+    {
+      id: 'controller',
+      name: 'Financial Controller',
+      level: 2,
+      icon: '📊',
+      avatar: '🎯',
+      department: 'Accounting',
+      responsibilities: ['Financial reporting', 'Internal controls', 'Audit coordination', 'Policy compliance'],
+      reportsTo: 'cfo',
+      manages: ['accounting_manager', 'tax_manager'],
+      skills: ['GAAP/IFRS', 'Internal controls', 'Financial reporting', 'Audit'],
+      tokenBudget: 35000,
+      priority: 'high'
+    },
+    {
+      id: 'treasurer',
+      name: 'Treasurer',
+      level: 2,
+      icon: '💰',
+      avatar: '🏦',
+      department: 'Treasury',
+      responsibilities: ['Cash management', 'Banking relations', 'Investment management', 'Funding'],
+      reportsTo: 'cfo',
+      manages: ['cash_manager', 'credit_analyst'],
+      skills: ['Cash flow', 'Risk management', 'Banking', 'Investments'],
+      tokenBudget: 30000,
+      priority: 'high'
+    },
+    
+    // LEVEL 3 - SENIOR SPECIALISTS
+    {
+      id: 'accounting_manager',
+      name: 'Accounting Manager',
+      level: 3,
+      icon: '📒',
+      avatar: '📚',
+      department: 'General Accounting',
+      responsibilities: ['General ledger', 'Month-end close', 'Reconciliations', 'Team supervision'],
+      reportsTo: 'controller',
+      manages: ['senior_bookkeeper', 'ar_specialist', 'ap_specialist'],
+      skills: ['General ledger', 'Reconciliation', 'Supervision', 'ERP systems'],
+      tokenBudget: 25000,
+      priority: 'high'
+    },
+    {
+      id: 'tax_manager',
+      name: 'Tax Manager',
+      level: 3,
+      icon: '📋',
+      avatar: '⚖️',
+      department: 'Tax',
+      responsibilities: ['Tax compliance', 'Tax planning', 'Audit support', 'Research'],
+      reportsTo: 'controller',
+      manages: ['tax_analyst'],
+      skills: ['Tax law', 'Compliance', 'Tax planning', 'Research'],
+      tokenBudget: 20000,
+      priority: 'high'
+    },
+    {
+      id: 'payroll_manager',
+      name: 'Payroll Manager',
+      level: 3,
+      icon: '💵',
+      avatar: '👥',
+      department: 'Payroll',
+      responsibilities: ['Payroll processing', 'Benefits admin', 'Compliance', 'Reporting'],
+      reportsTo: 'controller',
+      manages: ['payroll_specialist', 'benefits_coordinator'],
+      skills: ['Payroll systems', 'Labor law', 'Benefits', 'Reporting'],
+      tokenBudget: 20000,
+      priority: 'high'
+    },
+    {
+      id: 'sales_finance_manager',
+      name: 'Sales Finance Manager',
+      level: 3,
+      icon: '📈',
+      avatar: '💹',
+      department: 'Sales Finance',
+      responsibilities: ['Revenue recognition', 'Sales reporting', 'Commission calculations', 'Forecasting'],
+      reportsTo: 'controller',
+      manages: ['billing_specialist', 'commission_analyst'],
+      skills: ['Revenue recognition', 'Sales analysis', 'Forecasting', 'CRM'],
+      tokenBudget: 22000,
+      priority: 'high'
+    },
+    {
+      id: 'cash_manager',
+      name: 'Cash Manager',
+      level: 3,
+      icon: '🏧',
+      avatar: '💳',
+      department: 'Treasury',
+      responsibilities: ['Daily cash position', 'Bank reconciliation', 'Wire transfers', 'Liquidity'],
+      reportsTo: 'treasurer',
+      manages: ['cash_analyst'],
+      skills: ['Cash management', 'Banking', 'Forecasting', 'Treasury systems'],
+      tokenBudget: 18000,
+      priority: 'medium'
+    },
+    
+    // LEVEL 4 - SPECIALISTS
+    {
+      id: 'senior_bookkeeper',
+      name: 'Senior Bookkeeper',
+      level: 4,
+      icon: '📖',
+      avatar: '✍️',
+      department: 'Bookkeeping',
+      responsibilities: ['Journal entries', 'Bank reconciliation', 'Account maintenance', 'Documentation'],
+      reportsTo: 'accounting_manager',
+      manages: ['junior_bookkeeper'],
+      skills: ['Bookkeeping', 'Reconciliation', 'Data entry', 'Organization'],
+      tokenBudget: 15000,
+      priority: 'medium'
+    },
+    {
+      id: 'ar_specialist',
+      name: 'Accounts Receivable Specialist',
+      level: 4,
+      icon: '📥',
+      avatar: '💸',
+      department: 'AR',
+      responsibilities: ['Invoice generation', 'Payment collection', 'Customer accounts', 'Aging reports'],
+      reportsTo: 'accounting_manager',
+      manages: ['ar_clerk'],
+      skills: ['Invoicing', 'Collections', 'Customer service', 'Reporting'],
+      tokenBudget: 12000,
+      priority: 'medium'
+    },
+    {
+      id: 'ap_specialist',
+      name: 'Accounts Payable Specialist',
+      level: 4,
+      icon: '📤',
+      avatar: '💳',
+      department: 'AP',
+      responsibilities: ['Vendor payments', 'Invoice processing', 'Expense reports', 'Vendor management'],
+      reportsTo: 'accounting_manager',
+      manages: ['ap_clerk'],
+      skills: ['Payment processing', 'Vendor relations', 'Expense management', 'ERP'],
+      tokenBudget: 12000,
+      priority: 'medium'
+    },
+    {
+      id: 'billing_specialist',
+      name: 'Billing Specialist',
+      level: 4,
+      icon: '🧾',
+      avatar: '📝',
+      department: 'Billing',
+      responsibilities: ['Customer billing', 'Subscription management', 'Billing disputes', 'Revenue tracking'],
+      reportsTo: 'sales_finance_manager',
+      manages: [],
+      skills: ['Billing systems', 'Customer service', 'Revenue recognition', 'Dispute resolution'],
+      tokenBudget: 10000,
+      priority: 'medium'
+    },
+    {
+      id: 'payroll_specialist',
+      name: 'Payroll Specialist',
+      level: 4,
+      icon: '⏰',
+      avatar: '📅',
+      department: 'Payroll',
+      responsibilities: ['Payroll processing', 'Time tracking', 'Deductions', 'Pay queries'],
+      reportsTo: 'payroll_manager',
+      manages: [],
+      skills: ['Payroll software', 'Calculations', 'Compliance', 'Attention to detail'],
+      tokenBudget: 10000,
+      priority: 'medium'
+    },
+    {
+      id: 'tax_analyst',
+      name: 'Tax Analyst',
+      level: 4,
+      icon: '🔍',
+      avatar: '📑',
+      department: 'Tax',
+      responsibilities: ['Tax calculations', 'Return preparation', 'Research', 'Documentation'],
+      reportsTo: 'tax_manager',
+      manages: [],
+      skills: ['Tax preparation', 'Research', 'Analysis', 'Software'],
+      tokenBudget: 12000,
+      priority: 'medium'
+    },
+    {
+      id: 'commission_analyst',
+      name: 'Commission Analyst',
+      level: 4,
+      icon: '🎯',
+      avatar: '📊',
+      department: 'Sales Finance',
+      responsibilities: ['Commission calculations', 'Sales reporting', 'Incentive tracking', 'Dispute resolution'],
+      reportsTo: 'sales_finance_manager',
+      manages: [],
+      skills: ['Commission plans', 'Excel', 'Analysis', 'CRM integration'],
+      tokenBudget: 10000,
+      priority: 'medium'
+    },
+    
+    // LEVEL 5 - JUNIOR/CLERKS
+    {
+      id: 'junior_bookkeeper',
+      name: 'Junior Bookkeeper',
+      level: 5,
+      icon: '📓',
+      avatar: '✏️',
+      department: 'Bookkeeping',
+      responsibilities: ['Data entry', 'Filing', 'Basic reconciliation', 'Support tasks'],
+      reportsTo: 'senior_bookkeeper',
+      manages: [],
+      skills: ['Data entry', 'Organization', 'Basic accounting', 'Software'],
+      tokenBudget: 8000,
+      priority: 'low'
+    },
+    {
+      id: 'ar_clerk',
+      name: 'AR Clerk',
+      level: 5,
+      icon: '📋',
+      avatar: '📞',
+      department: 'AR',
+      responsibilities: ['Payment posting', 'Customer inquiries', 'Filing', 'Data entry'],
+      reportsTo: 'ar_specialist',
+      manages: [],
+      skills: ['Data entry', 'Customer service', 'Organization', 'Communication'],
+      tokenBudget: 8000,
+      priority: 'low'
+    },
+    {
+      id: 'ap_clerk',
+      name: 'AP Clerk',
+      level: 5,
+      icon: '📎',
+      avatar: '✉️',
+      department: 'AP',
+      responsibilities: ['Invoice entry', 'Vendor inquiries', 'Filing', 'Check preparation'],
+      reportsTo: 'ap_specialist',
+      manages: [],
+      skills: ['Data entry', 'Organization', 'Communication', 'Attention to detail'],
+      tokenBudget: 8000,
+      priority: 'low'
+    }
+  ],
+  
+  workflows: [
+    { id: 'invoice_to_cash', name: 'Invoice to Cash', steps: ['Create Invoice', 'Send to Customer', 'Track Payment', 'Record Receipt', 'Reconcile'] },
+    { id: 'procure_to_pay', name: 'Procure to Pay', steps: ['Purchase Request', 'PO Creation', 'Receive Goods', 'Invoice Match', 'Payment'] },
+    { id: 'payroll_cycle', name: 'Payroll Cycle', steps: ['Time Collection', 'Calculations', 'Approval', 'Processing', 'Distribution'] },
+    { id: 'month_end_close', name: 'Month-End Close', steps: ['Cutoff', 'Reconciliations', 'Adjustments', 'Review', 'Reporting'] },
+    { id: 'expense_reimbursement', name: 'Expense Reimbursement', steps: ['Submit', 'Review', 'Approve', 'Process', 'Reimburse'] }
+  ]
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+// COMPONENT
+// ═══════════════════════════════════════════════════════════════════════════
+
+const AccountingDepartment = ({ isOpen, onClose, onCreateAgent, onAssignTask }) => {
+  const [activeTab, setActiveTab] = useState('hierarchy');
+  const [selectedRole, setSelectedRole] = useState(null);
+  const [viewMode, setViewMode] = useState('org'); // org, list, cards
+
+  const rolesByLevel = useMemo(() => {
+    const grouped = {};
+    ACCOUNTING_HIERARCHY.roles.forEach(role => {
+      if (!grouped[role.level]) grouped[role.level] = [];
+      grouped[role.level].push(role);
+    });
+    return grouped;
+  }, []);
+
+  const stats = useMemo(() => ({
+    totalRoles: ACCOUNTING_HIERARCHY.roles.length,
+    totalBudget: ACCOUNTING_HIERARCHY.roles.reduce((s, r) => s + r.tokenBudget, 0),
+    byLevel: Object.entries(rolesByLevel).map(([level, roles]) => ({ level, count: roles.length })),
+    byDepartment: [...new Set(ACCOUNTING_HIERARCHY.roles.map(r => r.department))].length
+  }), [rolesByLevel]);
+
+  const handleCreateAgent = (role) => {
+    onCreateAgent?.({
+      ...role,
+      id: `agent_${role.id}_${Date.now()}`,
+      status: 'available',
+      createdAt: new Date().toISOString()
+    });
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="acc-overlay">
+      <div className="acc-modal">
+        <header className="acc-header">
+          <div className="acc-header-left"><span>🏦</span><div><h1>Accounting Department</h1><p>Financial management & reporting hierarchy</p></div></div>
+          <button className="acc-close" onClick={onClose}>✕</button>
+        </header>
+
+        <nav className="acc-tabs">
+          <button className={activeTab === 'hierarchy' ? 'active' : ''} onClick={() => setActiveTab('hierarchy')}>🏛️ Hierarchy</button>
+          <button className={activeTab === 'roles' ? 'active' : ''} onClick={() => setActiveTab('roles')}>👥 All Roles</button>
+          <button className={activeTab === 'workflows' ? 'active' : ''} onClick={() => setActiveTab('workflows')}>⚡ Workflows</button>
+          <button className={activeTab === 'dashboard' ? 'active' : ''} onClick={() => setActiveTab('dashboard')}>📊 Dashboard</button>
+        </nav>
+
+        <div className="acc-body">
+          {/* HIERARCHY TAB */}
+          {activeTab === 'hierarchy' && (
+            <div className="acc-hierarchy">
+              <div className="acc-org-chart">
+                {Object.entries(rolesByLevel).map(([level, roles]) => (
+                  <div key={level} className="acc-level">
+                    <div className="acc-level-label">Level {level}</div>
+                    <div className="acc-level-roles">
+                      {roles.map(role => (
+                        <div key={role.id} className={`acc-role-card ${selectedRole?.id === role.id ? 'selected' : ''}`} onClick={() => setSelectedRole(role)} style={{'--priority-color': role.priority === 'critical' ? '#ef4444' : role.priority === 'high' ? '#f59e0b' : '#10b981'}}>
+                          <span className="acc-role-avatar">{role.avatar}</span>
+                          <div className="acc-role-info"><strong>{role.name}</strong><small>{role.department}</small></div>
+                          <span className="acc-role-budget">🪙 {(role.tokenBudget/1000).toFixed(0)}k</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {selectedRole && (
+                <aside className="acc-role-detail">
+                  <div className="acc-detail-header">
+                    <span className="acc-detail-avatar">{selectedRole.avatar}</span>
+                    <div><h2>{selectedRole.name}</h2><span className="acc-dept-badge">{selectedRole.department}</span></div>
+                  </div>
+                  
+                  <div className="acc-detail-section">
+                    <h4>📋 Responsibilities</h4>
+                    <ul>{selectedRole.responsibilities.map((r, i) => <li key={i}>{r}</li>)}</ul>
+                  </div>
+                  
+                  <div className="acc-detail-section">
+                    <h4>🎯 Skills</h4>
+                    <div className="acc-skills">{selectedRole.skills.map((s, i) => <span key={i}>{s}</span>)}</div>
+                  </div>
+                  
+                  <div className="acc-detail-section">
+                    <h4>👥 Team Structure</h4>
+                    {selectedRole.reportsTo && <p><strong>Reports to:</strong> {ACCOUNTING_HIERARCHY.roles.find(r => r.id === selectedRole.reportsTo)?.name}</p>}
+                    {selectedRole.manages.length > 0 && <p><strong>Manages:</strong> {selectedRole.manages.map(m => ACCOUNTING_HIERARCHY.roles.find(r => r.id === m)?.name).join(', ')}</p>}
+                  </div>
+                  
+                  <div className="acc-detail-meta">
+                    <div><span>🪙</span><strong>{selectedRole.tokenBudget.toLocaleString()}</strong><small>Token Budget</small></div>
+                    <div><span>⚡</span><strong>{selectedRole.priority}</strong><small>Priority</small></div>
+                  </div>
+                  
+                  <button className="acc-create-btn" onClick={() => handleCreateAgent(selectedRole)}>🤖 Create Agent from Role</button>
+                </aside>
+              )}
+            </div>
+          )}
+
+          {/* ROLES TAB */}
+          {activeTab === 'roles' && (
+            <div className="acc-roles-list">
+              <div className="acc-roles-grid">
+                {ACCOUNTING_HIERARCHY.roles.map(role => (
+                  <div key={role.id} className="acc-role-full-card">
+                    <div className="acc-rfc-header"><span>{role.avatar}</span><div><h3>{role.name}</h3><small>{role.department} • Level {role.level}</small></div></div>
+                    <div className="acc-rfc-resp">{role.responsibilities.slice(0, 3).map((r, i) => <span key={i}>• {r}</span>)}</div>
+                    <div className="acc-rfc-footer"><span>🪙 {role.tokenBudget.toLocaleString()}</span><button onClick={() => handleCreateAgent(role)}>+ Create Agent</button></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* WORKFLOWS TAB */}
+          {activeTab === 'workflows' && (
+            <div className="acc-workflows">
+              <h2>⚡ Accounting Workflows</h2>
+              <div className="acc-wf-grid">
+                {ACCOUNTING_HIERARCHY.workflows.map(wf => (
+                  <div key={wf.id} className="acc-wf-card">
+                    <h3>{wf.name}</h3>
+                    <div className="acc-wf-steps">{wf.steps.map((s, i) => <><span key={i} className="acc-wf-step">{i + 1}. {s}</span>{i < wf.steps.length - 1 && <span className="acc-wf-arrow">→</span>}</>)}</div>
+                    <button onClick={() => onAssignTask?.({ workflow: wf.id, name: wf.name })}>Use Workflow</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* DASHBOARD TAB */}
+          {activeTab === 'dashboard' && (
+            <div className="acc-dashboard">
+              <div className="acc-stats-grid">
+                <div className="acc-stat-card"><span>👥</span><strong>{stats.totalRoles}</strong><small>Total Roles</small></div>
+                <div className="acc-stat-card"><span>🏢</span><strong>{stats.byDepartment}</strong><small>Departments</small></div>
+                <div className="acc-stat-card"><span>🪙</span><strong>{(stats.totalBudget/1000).toFixed(0)}k</strong><small>Total Budget</small></div>
+                <div className="acc-stat-card"><span>📊</span><strong>{ACCOUNTING_HIERARCHY.workflows.length}</strong><small>Workflows</small></div>
+              </div>
+              
+              <div className="acc-budget-chart">
+                <h3>💰 Budget by Role Level</h3>
+                <div className="acc-budget-bars">
+                  {stats.byLevel.map(({ level, count }) => {
+                    const levelBudget = rolesByLevel[level]?.reduce((s, r) => s + r.tokenBudget, 0) || 0;
+                    return (
+                      <div key={level} className="acc-budget-row">
+                        <span>Level {level}</span>
+                        <div className="acc-budget-bar"><div style={{ width: `${(levelBudget / stats.totalBudget) * 100}%` }}></div></div>
+                        <span>{(levelBudget/1000).toFixed(0)}k</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default AccountingDepartment;

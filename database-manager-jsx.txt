@@ -1,0 +1,229 @@
+/*
+╔══════════════════════════════════════════════════════════════════════════════╗
+║   💾 ROADY - DATABASE MANAGER                                                ║
+║   Visualize, query, and manage all your data                                 ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+*/
+
+import React, { useState, useMemo } from 'react';
+
+export const DATA_TABLES = {
+  agents: { id: 'agents', name: 'Agents', icon: '🤖', color: '#6366f1', columns: [
+    { key: 'id', label: 'ID', type: 'string', width: 80 }, { key: 'name', label: 'Name', type: 'string', width: 150 },
+    { key: 'role', label: 'Role', type: 'string', width: 120 }, { key: 'status', label: 'Status', type: 'status', width: 100 },
+    { key: 'totalTokens', label: 'Tokens', type: 'number', width: 100 }, { key: 'tasksCompleted', label: 'Tasks', type: 'number', width: 80 }
+  ]},
+  meetings: { id: 'meetings', name: 'Meetings', icon: '📅', color: '#10b981', columns: [
+    { key: 'id', label: 'ID', type: 'string', width: 80 }, { key: 'name', label: 'Name', type: 'string', width: 200 },
+    { key: 'status', label: 'Status', type: 'status', width: 100 }, { key: 'tokenBudget', label: 'Budget', type: 'number', width: 100 },
+    { key: 'tokensUsed', label: 'Used', type: 'number', width: 100 }
+  ]},
+  tasks: { id: 'tasks', name: 'Tasks', icon: '✅', color: '#ec4899', columns: [
+    { key: 'id', label: 'ID', type: 'string', width: 80 }, { key: 'name', label: 'Name', type: 'string', width: 200 },
+    { key: 'status', label: 'Status', type: 'status', width: 100 }, { key: 'priority', label: 'Priority', type: 'priority', width: 100 },
+    { key: 'assignedAgent', label: 'Agent', type: 'string', width: 120 }
+  ]},
+  workflows: { id: 'workflows', name: 'Workflows', icon: '⚡', color: '#8b5cf6', columns: [
+    { key: 'id', label: 'ID', type: 'string', width: 80 }, { key: 'name', label: 'Name', type: 'string', width: 200 },
+    { key: 'steps', label: 'Steps', type: 'number', width: 80 }, { key: 'status', label: 'Status', type: 'status', width: 100 }
+  ]},
+  offices: { id: 'offices', name: 'Offices', icon: '🏢', color: '#14b8a6', columns: [
+    { key: 'id', label: 'ID', type: 'string', width: 80 }, { key: 'name', label: 'Name', type: 'string', width: 200 },
+    { key: 'type', label: 'Type', type: 'string', width: 100 }, { key: 'agentCount', label: 'Agents', type: 'number', width: 80 }
+  ]},
+  tokenUsage: { id: 'tokenUsage', name: 'Token Usage', icon: '🪙', color: '#eab308', columns: [
+    { key: 'id', label: 'ID', type: 'string', width: 80 }, { key: 'entityType', label: 'Type', type: 'string', width: 100 },
+    { key: 'tokens', label: 'Tokens', type: 'number', width: 100 }, { key: 'cost', label: 'Cost', type: 'currency', width: 100 }
+  ]}
+};
+
+const DatabaseManager = ({ isOpen, onClose, agents = [], meetings = [], tasks = [], workflows = [], offices = [], tokenUsage = [], onCreateItem, onUpdateItem, onDeleteItem, onExport }) => {
+  const [activeTable, setActiveTable] = useState('agents');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortConfig, setSortConfig] = useState({ key: 'id', direction: 'asc' });
+  const [selectedRows, setSelectedRows] = useState([]);
+  const [viewMode, setViewMode] = useState('table');
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState({});
+
+  const dataMap = { agents, meetings, tasks, workflows, offices, tokenUsage };
+  const currentData = dataMap[activeTable] || [];
+  const currentConfig = DATA_TABLES[activeTable];
+
+  const processedData = useMemo(() => {
+    let result = [...currentData];
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(item => Object.values(item).some(v => String(v).toLowerCase().includes(q)));
+    }
+    Object.entries(filters).forEach(([k, v]) => { if (v) result = result.filter(item => item[k] === v); });
+    if (sortConfig.key) {
+      result.sort((a, b) => {
+        if (a[sortConfig.key] < b[sortConfig.key]) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (a[sortConfig.key] > b[sortConfig.key]) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+    return result;
+  }, [currentData, searchQuery, filters, sortConfig]);
+
+  const stats = useMemo(() => ({
+    totalRecords: Object.values(dataMap).reduce((s, a) => s + a.length, 0),
+    totalAgents: agents.length, activeAgents: agents.filter(a => a.status === 'active' || a.status === 'available').length,
+    totalTasks: tasks.length, completedTasks: tasks.filter(t => t.status === 'done' || t.status === 'completed').length,
+    totalTokens: tokenUsage.reduce((s, t) => s + (t.tokens || 0), 0),
+    totalCost: tokenUsage.reduce((s, t) => s + (t.cost || 0), 0)
+  }), [agents, tasks, tokenUsage]);
+
+  const handleSort = (k) => setSortConfig(p => ({ key: k, direction: p.key === k && p.direction === 'asc' ? 'desc' : 'asc' }));
+  const handleSelectAll = () => setSelectedRows(selectedRows.length === processedData.length ? [] : processedData.map(i => i.id));
+  const handleSelectRow = (id) => setSelectedRows(p => p.includes(id) ? p.filter(r => r !== id) : [...p, id]);
+  const handleExport = (fmt) => onExport?.(activeTable, selectedRows.length > 0 ? processedData.filter(i => selectedRows.includes(i.id)) : processedData, fmt);
+  const handleBulkDelete = () => { if (window.confirm(`Delete ${selectedRows.length} items?`)) { selectedRows.forEach(id => onDeleteItem?.(activeTable, id)); setSelectedRows([]); } };
+
+  const renderCell = (item, col) => {
+    const v = item[col.key];
+    switch (col.type) {
+      case 'status': const sc = { active: '#10b981', available: '#10b981', done: '#10b981', busy: '#f59e0b', pending: '#f59e0b', offline: '#ef4444' }; return <span className="db-status-badge" style={{ background: `${sc[v] || '#666'}30`, color: sc[v] || '#666' }}>{v}</span>;
+      case 'priority': const pc = { high: '#ef4444', medium: '#f59e0b', low: '#10b981' }; return <span className="db-priority-badge" style={{ background: `${pc[v] || '#666'}30`, color: pc[v] || '#666' }}>{v}</span>;
+      case 'number': return <span className="db-number">{(v || 0).toLocaleString()}</span>;
+      case 'currency': return <span className="db-currency">${(v || 0).toFixed(4)}</span>;
+      case 'progress': return <div className="db-progress-cell"><div className="db-progress-bar"><div className="db-progress-fill" style={{ width: `${v || 0}%` }}></div></div><span>{v || 0}%</span></div>;
+      default: return v || '-';
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="db-overlay">
+      <div className="db-modal">
+        <header className="db-header">
+          <div className="db-header-left"><span className="db-header-icon">💾</span><div><h1>Database Manager</h1><p>{stats.totalRecords.toLocaleString()} total records</p></div></div>
+          <div className="db-header-right">
+            <button className="db-btn" onClick={() => handleExport('json')}>📤 JSON</button>
+            <button className="db-btn" onClick={() => handleExport('csv')}>📊 CSV</button>
+            <button className="db-close" onClick={onClose}>✕</button>
+          </div>
+        </header>
+
+        <div className="db-body">
+          <aside className="db-sidebar">
+            <div className="db-sidebar-section">
+              <h3>📊 Tables</h3>
+              {Object.values(DATA_TABLES).map(t => (
+                <button key={t.id} className={`db-table-btn ${activeTable === t.id ? 'active' : ''}`} onClick={() => { setActiveTable(t.id); setSelectedRows([]); }} style={{ '--table-color': t.color }}>
+                  <span className="db-table-icon">{t.icon}</span><span className="db-table-name">{t.name}</span><span className="db-table-count">{dataMap[t.id]?.length || 0}</span>
+                </button>
+              ))}
+            </div>
+            <div className="db-sidebar-section">
+              <h3>📈 Quick Stats</h3>
+              <div className="db-quick-stats">
+                <div className="db-quick-stat"><span>🤖</span><div><strong>{stats.activeAgents}/{stats.totalAgents}</strong><small>Agents</small></div></div>
+                <div className="db-quick-stat"><span>✅</span><div><strong>{stats.completedTasks}/{stats.totalTasks}</strong><small>Tasks</small></div></div>
+                <div className="db-quick-stat"><span>🪙</span><div><strong>{(stats.totalTokens/1000).toFixed(1)}k</strong><small>Tokens</small></div></div>
+                <div className="db-quick-stat"><span>💰</span><div><strong>${stats.totalCost.toFixed(2)}</strong><small>Cost</small></div></div>
+              </div>
+            </div>
+          </aside>
+
+          <main className="db-main">
+            <div className="db-toolbar">
+              <div className="db-toolbar-left">
+                <div className="db-search"><span>🔍</span><input type="text" placeholder={`Search ${currentConfig?.name}...`} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} /></div>
+                <button className={`db-btn ${showFilters ? 'active' : ''}`} onClick={() => setShowFilters(!showFilters)}>🎛️ Filters</button>
+              </div>
+              <div className="db-toolbar-right">
+                <div className="db-view-toggle">
+                  <button className={viewMode === 'table' ? 'active' : ''} onClick={() => setViewMode('table')}>📋</button>
+                  <button className={viewMode === 'cards' ? 'active' : ''} onClick={() => setViewMode('cards')}>📇</button>
+                  <button className={viewMode === 'analytics' ? 'active' : ''} onClick={() => setViewMode('analytics')}>📊</button>
+                </div>
+                {selectedRows.length > 0 && <div className="db-bulk-actions"><span>{selectedRows.length} selected</span><button className="db-btn danger" onClick={handleBulkDelete}>🗑️</button></div>}
+                <button className="db-btn primary" onClick={() => onCreateItem?.(activeTable)}>+ New</button>
+              </div>
+            </div>
+
+            {showFilters && (
+              <div className="db-filters-panel"><div className="db-filter-row">
+                {currentConfig?.columns.filter(c => c.type === 'status' || c.type === 'priority').map(col => (
+                  <div key={col.key} className="db-filter-item"><label>{col.label}</label>
+                    <select value={filters[col.key] || ''} onChange={(e) => setFilters({ ...filters, [col.key]: e.target.value })}>
+                      <option value="">All</option>
+                      {col.type === 'status' && <><option value="active">Active</option><option value="available">Available</option><option value="busy">Busy</option><option value="done">Done</option><option value="pending">Pending</option></>}
+                      {col.type === 'priority' && <><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></>}
+                    </select>
+                  </div>
+                ))}
+                <button className="db-btn-clear" onClick={() => setFilters({})}>Clear</button>
+              </div></div>
+            )}
+
+            {viewMode === 'table' && (
+              <div className="db-table-container">
+                <table className="db-table">
+                  <thead><tr>
+                    <th className="db-th-checkbox"><input type="checkbox" checked={selectedRows.length === processedData.length && processedData.length > 0} onChange={handleSelectAll} /></th>
+                    {currentConfig?.columns.map(col => (<th key={col.key} style={{ width: col.width }} onClick={() => handleSort(col.key)} className="db-th-sortable">{col.label}{sortConfig.key === col.key && <span className="db-sort-icon">{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>}</th>))}
+                    <th className="db-th-actions">Actions</th>
+                  </tr></thead>
+                  <tbody>
+                    {processedData.map(item => (
+                      <tr key={item.id} className={selectedRows.includes(item.id) ? 'selected' : ''}>
+                        <td><input type="checkbox" checked={selectedRows.includes(item.id)} onChange={() => handleSelectRow(item.id)} /></td>
+                        {currentConfig?.columns.map(col => <td key={col.key}>{renderCell(item, col)}</td>)}
+                        <td className="db-td-actions">
+                          <button onClick={() => onUpdateItem?.(activeTable, item)}>✏️</button>
+                          <button className="danger" onClick={() => onDeleteItem?.(activeTable, item.id)}>🗑️</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {processedData.length === 0 && <div className="db-empty"><span>{currentConfig?.icon}</span><p>No {currentConfig?.name?.toLowerCase()} found</p></div>}
+              </div>
+            )}
+
+            {viewMode === 'cards' && (
+              <div className="db-cards-container">
+                {processedData.map(item => (
+                  <div key={item.id} className="db-card" style={{ '--card-color': currentConfig?.color }}>
+                    <div className="db-card-header"><span className="db-card-icon">{currentConfig?.icon}</span><h4>{item.name || item.id}</h4>{item.status && renderCell(item, { key: 'status', type: 'status' })}</div>
+                    <div className="db-card-body">{currentConfig?.columns.slice(2, 5).map(col => <div key={col.key} className="db-card-field"><label>{col.label}</label><span>{renderCell(item, col)}</span></div>)}</div>
+                    <div className="db-card-actions"><button onClick={() => onUpdateItem?.(activeTable, item)}>Edit</button></div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {viewMode === 'analytics' && (
+              <div className="db-analytics"><div className="db-analytics-grid">
+                <div className="db-analytics-card"><h3>🪙 Token Usage</h3><div className="db-chart-bars">
+                  {['agents', 'meetings', 'tasks'].map(e => {
+                    const total = tokenUsage.filter(t => t.entityType === e).reduce((s, t) => s + t.tokens, 0);
+                    return <div key={e} className="db-chart-bar-row"><span className="db-chart-label">{e}</span><div className="db-chart-bar-bg"><div className="db-chart-bar-fill" style={{ width: `${Math.min((total / 50000) * 100, 100)}%` }}></div></div><span className="db-chart-value">{(total/1000).toFixed(1)}k</span></div>;
+                  })}
+                </div></div>
+                <div className="db-analytics-card"><h3>📊 {currentConfig?.name} by Status</h3><div className="db-status-chart">
+                  {['active', 'available', 'busy', 'done', 'pending'].map(status => {
+                    const count = currentData.filter(i => i.status === status).length;
+                    if (!count) return null;
+                    return <div key={status} className="db-status-item"><div className="db-status-bar" style={{ width: `${(count/currentData.length)*100}%`, background: status === 'active' || status === 'available' || status === 'done' ? '#10b981' : status === 'busy' || status === 'pending' ? '#f59e0b' : '#666' }}></div><span>{status}: {count}</span></div>;
+                  })}
+                </div></div>
+                <div className="db-analytics-card full-width"><h3>🔗 Data Relations</h3><div className="db-relations-visual">
+                  {Object.values(DATA_TABLES).map(t => <div key={t.id} className="db-relation-node" style={{ '--node-color': t.color }}><span>{t.icon}</span><strong>{t.name}</strong><small>{dataMap[t.id]?.length || 0}</small></div>)}
+                </div></div>
+              </div></div>
+            )}
+
+            <div className="db-pagination"><span>Showing {processedData.length} of {currentData.length} {currentConfig?.name?.toLowerCase()}</span></div>
+          </main>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default DatabaseManager;

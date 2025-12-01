@@ -1,0 +1,220 @@
+# ============================================
+# BACKEND DOCKERFILE
+# backend/Dockerfile
+# ============================================
+
+FROM python:3.11-slim as base
+
+# Métadonnées
+LABEL maintainer="ROADY Team <dev@roady.construction>"
+LABEL version="1.0.0"
+LABEL description="ROADY Construction API Backend"
+
+# Variables d'environnement
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONFAULTHANDLER=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# Répertoire de travail
+WORKDIR /app
+
+# Installer les dépendances système
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# ============================================
+# Stage: Dependencies
+# ============================================
+FROM base as dependencies
+
+# Copier requirements
+COPY requirements.txt .
+
+# Installer les dépendances Python
+RUN pip install --upgrade pip && \
+    pip install -r requirements.txt
+
+# ============================================
+# Stage: Development
+# ============================================
+FROM dependencies as development
+
+# Copier le code source
+COPY . .
+
+# Créer répertoires nécessaires
+RUN mkdir -p /app/logs /app/uploads
+
+# Port exposé
+EXPOSE 8000
+
+# Healthcheck
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# Commande de démarrage (dev avec reload)
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+
+# ============================================
+# Stage: Production
+# ============================================
+FROM dependencies as production
+
+# Copier le code source
+COPY . .
+
+# Créer un utilisateur non-root
+RUN useradd --create-home --shell /bin/bash appuser && \
+    chown -R appuser:appuser /app
+USER appuser
+
+# Créer répertoires nécessaires
+RUN mkdir -p /app/logs /app/uploads
+
+# Port exposé
+EXPOSE 8000
+
+# Healthcheck
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# Commande de démarrage (prod avec workers)
+CMD ["gunicorn", "src.main:app", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", "-b", "0.0.0.0:8000"]
+
+
+# ============================================
+# FRONTEND DOCKERFILE  
+# frontend/Dockerfile
+# ============================================
+# Utiliser ce contenu dans frontend/Dockerfile
+
+# --- Début frontend/Dockerfile ---
+
+FROM node:20-alpine as base
+
+LABEL maintainer="ROADY Team <dev@roady.construction>"
+LABEL version="1.0.0"
+LABEL description="ROADY Construction Frontend"
+
+WORKDIR /app
+
+# ============================================
+# Stage: Dependencies
+# ============================================
+FROM base as dependencies
+
+# Copier package files
+COPY package*.json ./
+
+# Installer les dépendances
+RUN npm ci
+
+# ============================================
+# Stage: Development
+# ============================================
+FROM dependencies as development
+
+# Copier le code source
+COPY . .
+
+# Port exposé
+EXPOSE 3000
+
+# Variables d'environnement pour le dev server
+ENV HOST=0.0.0.0
+ENV PORT=3000
+
+# Commande de démarrage (dev avec HMR)
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+
+# ============================================
+# Stage: Build
+# ============================================
+FROM dependencies as build
+
+# Arguments de build
+ARG VITE_API_URL=http://localhost:8000
+ARG VITE_WS_URL=ws://localhost:8000
+
+# Variables d'environnement pour le build
+ENV VITE_API_URL=$VITE_API_URL
+ENV VITE_WS_URL=$VITE_WS_URL
+
+# Copier le code source
+COPY . .
+
+# Build de production
+RUN npm run build
+
+# ============================================
+# Stage: Production (Nginx)
+# ============================================
+FROM nginx:alpine as production
+
+# Copier la config nginx
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Copier les fichiers buildés
+COPY --from=build /app/dist /usr/share/nginx/html
+
+# Créer le script d'injection des variables d'environnement
+RUN echo '#!/bin/sh' > /docker-entrypoint.d/40-envsubst-on-index.sh && \
+    echo 'envsubst < /usr/share/nginx/html/index.html > /usr/share/nginx/html/index.html.tmp' >> /docker-entrypoint.d/40-envsubst-on-index.sh && \
+    echo 'mv /usr/share/nginx/html/index.html.tmp /usr/share/nginx/html/index.html' >> /docker-entrypoint.d/40-envsubst-on-index.sh && \
+    chmod +x /docker-entrypoint.d/40-envsubst-on-index.sh
+
+# Port exposé
+EXPOSE 80
+
+# Healthcheck
+HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost/ || exit 1
+
+CMD ["nginx", "-g", "daemon off;"]
+
+
+# ============================================
+# FRONTEND NGINX CONFIG
+# frontend/nginx.conf
+# ============================================
+# server {
+#     listen 80;
+#     server_name localhost;
+#     root /usr/share/nginx/html;
+#     index index.html;
+# 
+#     # Gzip compression
+#     gzip on;
+#     gzip_types text/plain text/css application/json application/javascript text/xml application/xml;
+# 
+#     # Cache static assets
+#     location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2)$ {
+#         expires 1y;
+#         add_header Cache-Control "public, immutable";
+#     }
+# 
+#     # SPA fallback
+#     location / {
+#         try_files $uri $uri/ /index.html;
+#     }
+# 
+#     # API proxy (optionnel si même origine)
+#     location /api/ {
+#         proxy_pass http://api:8000/;
+#         proxy_set_header Host $host;
+#         proxy_set_header X-Real-IP $remote_addr;
+#     }
+# 
+#     # WebSocket proxy
+#     location /ws/ {
+#         proxy_pass http://api:8000/ws/;
+#         proxy_http_version 1.1;
+#         proxy_set_header Upgrade $http_upgrade;
+#         proxy_set_header Connection "upgrade";
+#     }
+# }

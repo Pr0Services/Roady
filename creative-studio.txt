@@ -1,0 +1,248 @@
+/*
+╔══════════════════════════════════════════════════════════════════════════════╗
+║   🎨 ROADY - CREATIVE STUDIO                                                 ║
+║   Content Editor, Templates, AI Generation, Preview                          ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+*/
+
+import React, { useState } from 'react';
+
+export const CONTENT_TEMPLATES = [
+  { id: 'blog', name: '📝 Blog Post', icon: '📝', sections: ['Title', 'Introduction', 'Body', 'Conclusion', 'CTA'], tokens: 2000 },
+  { id: 'social', name: '📱 Social Media', icon: '📱', sections: ['Hook', 'Content', 'Hashtags', 'CTA'], tokens: 500 },
+  { id: 'email', name: '📧 Email Campaign', icon: '📧', sections: ['Subject', 'Preview', 'Header', 'Body', 'CTA', 'Footer'], tokens: 1000 },
+  { id: 'ad', name: '🎯 Ad Copy', icon: '🎯', sections: ['Headline', 'Description', 'CTA', 'Keywords'], tokens: 300 },
+  { id: 'video', name: '🎬 Video Script', icon: '🎬', sections: ['Hook', 'Problem', 'Solution', 'Benefits', 'CTA'], tokens: 1500 },
+  { id: 'landing', name: '🚀 Landing Page', icon: '🚀', sections: ['Hero', 'Problem', 'Solution', 'Features', 'Testimonials', 'CTA'], tokens: 2500 },
+  { id: 'product', name: '🛍️ Product Description', icon: '🛍️', sections: ['Title', 'Features', 'Benefits', 'Specs', 'CTA'], tokens: 800 },
+  { id: 'press', name: '📰 Press Release', icon: '📰', sections: ['Headline', 'Subhead', 'Lead', 'Body', 'Boilerplate', 'Contact'], tokens: 1200 }
+];
+
+export const BRAND_VOICES = [
+  { id: 'professional', name: 'Professional', emoji: '👔', description: 'Formal, authoritative, trustworthy' },
+  { id: 'friendly', name: 'Friendly', emoji: '😊', description: 'Warm, approachable, conversational' },
+  { id: 'bold', name: 'Bold', emoji: '🔥', description: 'Confident, energetic, impactful' },
+  { id: 'playful', name: 'Playful', emoji: '🎉', description: 'Fun, witty, entertaining' },
+  { id: 'luxury', name: 'Luxury', emoji: '✨', description: 'Elegant, sophisticated, exclusive' },
+  { id: 'technical', name: 'Technical', emoji: '⚙️', description: 'Precise, detailed, expert' }
+];
+
+const CreativeStudio = ({ isOpen, onClose, onGenerate, onSave, savedContent = [] }) => {
+  const [activeTab, setActiveTab] = useState('create');
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [brandVoice, setBrandVoice] = useState('professional');
+  const [content, setContent] = useState({});
+  const [generating, setGenerating] = useState(false);
+  const [previewMode, setPreviewMode] = useState(false);
+  
+  const [projectSettings, setProjectSettings] = useState({
+    name: '', targetAudience: '', keywords: '', tone: '', language: 'en', platform: ''
+  });
+
+  const handleSelectTemplate = (template) => {
+    setSelectedTemplate(template);
+    const initialContent = {};
+    template.sections.forEach(s => { initialContent[s] = ''; });
+    setContent(initialContent);
+  };
+
+  const handleGenerate = async (section) => {
+    setGenerating(true);
+    // Simulate AI generation
+    setTimeout(() => {
+      const generated = `[AI Generated ${section} content for ${selectedTemplate?.name} in ${brandVoice} voice targeting ${projectSettings.targetAudience || 'general audience'}...]`;
+      setContent(prev => ({ ...prev, [section]: generated }));
+      setGenerating(false);
+    }, 1500);
+    onGenerate?.({ section, template: selectedTemplate, voice: brandVoice, settings: projectSettings });
+  };
+
+  const handleGenerateAll = async () => {
+    setGenerating(true);
+    for (const section of selectedTemplate?.sections || []) {
+      await new Promise(r => setTimeout(r, 800));
+      setContent(prev => ({ ...prev, [section]: `[AI Generated ${section}...]` }));
+    }
+    setGenerating(false);
+  };
+
+  const handleSave = () => {
+    onSave?.({ template: selectedTemplate, content, settings: projectSettings, voice: brandVoice, savedAt: new Date().toISOString() });
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="cs-overlay">
+      <div className="cs-modal">
+        <header className="cs-header">
+          <div className="cs-header-left"><span>🎨</span><div><h1>Creative Studio</h1><p>AI-powered content creation</p></div></div>
+          <div className="cs-header-actions">
+            {selectedTemplate && <button className="cs-btn" onClick={() => setPreviewMode(!previewMode)}>{previewMode ? '✏️ Edit' : '👁️ Preview'}</button>}
+            <button className="cs-close" onClick={onClose}>✕</button>
+          </div>
+        </header>
+
+        <nav className="cs-tabs">
+          <button className={activeTab === 'create' ? 'active' : ''} onClick={() => setActiveTab('create')}>✨ Create</button>
+          <button className={activeTab === 'templates' ? 'active' : ''} onClick={() => setActiveTab('templates')}>📋 Templates</button>
+          <button className={activeTab === 'library' ? 'active' : ''} onClick={() => setActiveTab('library')}>📚 Library</button>
+          <button className={activeTab === 'settings' ? 'active' : ''} onClick={() => setActiveTab('settings')}>⚙️ Settings</button>
+        </nav>
+
+        <div className="cs-body">
+          {/* TEMPLATES TAB */}
+          {activeTab === 'templates' && (
+            <div className="cs-templates">
+              <h2>Choose a Template</h2>
+              <div className="cs-template-grid">
+                {CONTENT_TEMPLATES.map(t => (
+                  <div key={t.id} className={`cs-template-card ${selectedTemplate?.id === t.id ? 'selected' : ''}`} onClick={() => { handleSelectTemplate(t); setActiveTab('create'); }}>
+                    <span className="cs-template-icon">{t.icon}</span>
+                    <h3>{t.name}</h3>
+                    <div className="cs-template-sections">{t.sections.map((s, i) => <span key={i}>{s}</span>)}</div>
+                    <div className="cs-template-meta"><span>🪙 ~{t.tokens} tokens</span><span>📄 {t.sections.length} sections</span></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* CREATE TAB */}
+          {activeTab === 'create' && (
+            <div className="cs-create">
+              {!selectedTemplate ? (
+                <div className="cs-no-template">
+                  <span>📋</span>
+                  <h2>Select a Template</h2>
+                  <p>Choose a content template to get started</p>
+                  <button onClick={() => setActiveTab('templates')}>Browse Templates</button>
+                </div>
+              ) : (
+                <div className="cs-editor-layout">
+                  <aside className="cs-editor-sidebar">
+                    <div className="cs-sidebar-section">
+                      <h3>📋 Template</h3>
+                      <div className="cs-current-template">
+                        <span>{selectedTemplate.icon}</span>
+                        <div><strong>{selectedTemplate.name}</strong><small>{selectedTemplate.sections.length} sections</small></div>
+                        <button onClick={() => setActiveTab('templates')}>Change</button>
+                      </div>
+                    </div>
+
+                    <div className="cs-sidebar-section">
+                      <h3>🎭 Brand Voice</h3>
+                      <div className="cs-voice-options">
+                        {BRAND_VOICES.map(v => (
+                          <button key={v.id} className={`cs-voice-btn ${brandVoice === v.id ? 'selected' : ''}`} onClick={() => setBrandVoice(v.id)}>
+                            <span>{v.emoji}</span><div><strong>{v.name}</strong><small>{v.description}</small></div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="cs-sidebar-section">
+                      <h3>🎯 Project Details</h3>
+                      <div className="cs-field"><label>Project Name</label><input value={projectSettings.name} onChange={(e) => setProjectSettings(p => ({...p, name: e.target.value}))} placeholder="My Campaign" /></div>
+                      <div className="cs-field"><label>Target Audience</label><input value={projectSettings.targetAudience} onChange={(e) => setProjectSettings(p => ({...p, targetAudience: e.target.value}))} placeholder="e.g., Young professionals" /></div>
+                      <div className="cs-field"><label>Keywords</label><input value={projectSettings.keywords} onChange={(e) => setProjectSettings(p => ({...p, keywords: e.target.value}))} placeholder="keyword1, keyword2" /></div>
+                    </div>
+
+                    <button className="cs-generate-all" onClick={handleGenerateAll} disabled={generating}>
+                      {generating ? '⏳ Generating...' : '✨ Generate All Sections'}
+                    </button>
+                    <button className="cs-save-btn" onClick={handleSave}>💾 Save to Library</button>
+                  </aside>
+
+                  <main className="cs-editor-main">
+                    {previewMode ? (
+                      <div className="cs-preview">
+                        <h2>Preview: {selectedTemplate.name}</h2>
+                        <div className="cs-preview-content">
+                          {selectedTemplate.sections.map(section => (
+                            <div key={section} className="cs-preview-section">
+                              <h3>{section}</h3>
+                              <p>{content[section] || <em>No content yet</em>}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="cs-sections">
+                        {selectedTemplate.sections.map((section, idx) => (
+                          <div key={section} className="cs-section-editor">
+                            <div className="cs-section-header">
+                              <span className="cs-section-num">{idx + 1}</span>
+                              <h3>{section}</h3>
+                              <button className="cs-generate-btn" onClick={() => handleGenerate(section)} disabled={generating}>
+                                {generating ? '⏳' : '✨'} Generate
+                              </button>
+                            </div>
+                            <textarea value={content[section] || ''} onChange={(e) => setContent(prev => ({ ...prev, [section]: e.target.value }))} placeholder={`Write your ${section.toLowerCase()} here...`} rows={4} />
+                            <div className="cs-section-tools">
+                              <button>🔄 Rewrite</button>
+                              <button>📏 Expand</button>
+                              <button>✂️ Shorten</button>
+                              <button>🎯 Improve</button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </main>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* LIBRARY TAB */}
+          {activeTab === 'library' && (
+            <div className="cs-library">
+              <h2>📚 Content Library</h2>
+              {savedContent.length === 0 ? (
+                <div className="cs-empty"><span>📭</span><p>No saved content yet</p></div>
+              ) : (
+                <div className="cs-library-grid">
+                  {savedContent.map((item, i) => (
+                    <div key={i} className="cs-library-item">
+                      <span>{item.template?.icon}</span>
+                      <div><strong>{item.settings?.name || 'Untitled'}</strong><small>{item.template?.name}</small></div>
+                      <span className="cs-library-date">{new Date(item.savedAt).toLocaleDateString()}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* SETTINGS TAB */}
+          {activeTab === 'settings' && (
+            <div className="cs-settings">
+              <h2>⚙️ Studio Settings</h2>
+              <div className="cs-settings-grid">
+                <div className="cs-setting-card">
+                  <h3>🌐 Default Language</h3>
+                  <select value={projectSettings.language} onChange={(e) => setProjectSettings(p => ({...p, language: e.target.value}))}>
+                    <option value="en">English</option><option value="fr">Français</option><option value="es">Español</option><option value="de">Deutsch</option>
+                  </select>
+                </div>
+                <div className="cs-setting-card">
+                  <h3>🤖 AI Model</h3>
+                  <select><option>GPT-4o</option><option>GPT-4o-mini</option><option>Claude 3</option></select>
+                </div>
+                <div className="cs-setting-card">
+                  <h3>🎨 Default Voice</h3>
+                  <select value={brandVoice} onChange={(e) => setBrandVoice(e.target.value)}>
+                    {BRAND_VOICES.map(v => <option key={v.id} value={v.id}>{v.emoji} {v.name}</option>)}
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default CreativeStudio;

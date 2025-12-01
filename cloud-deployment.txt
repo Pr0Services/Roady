@@ -1,0 +1,648 @@
+# ============================================================
+# ROADY CONSTRUCTION - DÉPLOIEMENT CLOUD COMPLET
+# Docker + Kubernetes + Helm + CI/CD
+# ============================================================
+
+# ============================================================
+# 1. DOCKERFILE - API Backend
+# ============================================================
+# --- Dockerfile.api ---
+# syntax=docker/dockerfile:1
+FROM python:3.11-slim as base
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
+
+WORKDIR /app
+
+# Install dependencies
+COPY requirements.txt .
+RUN pip install --upgrade pip && \
+    pip install -r requirements.txt
+
+# Copy application
+COPY ./src ./src
+COPY ./alembic ./alembic
+COPY alembic.ini .
+
+# Create non-root user
+RUN adduser --disabled-password --gecos '' appuser && \
+    chown -R appuser:appuser /app
+USER appuser
+
+EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+# ============================================================
+# 2. DOCKERFILE - Frontend React
+# ============================================================
+# --- Dockerfile.web ---
+FROM node:20-alpine as builder
+
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --silent
+
+COPY . .
+RUN npm run build
+
+# Production image
+FROM nginx:alpine
+COPY --from=builder /app/dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/nginx.conf
+
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
+
+# ============================================================
+# 3. DOCKER COMPOSE - Développement Local
+# ============================================================
+# --- docker-compose.yml ---
+version: '3.9'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: roady-postgres
+    environment:
+      POSTGRES_DB: roady
+      POSTGRES_USER: roady_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U roady_user -d roady"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: roady-redis
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # API Backend
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: roady-api
+    environment:
+      DATABASE_URL: postgresql://roady_user:${DB_PASSWORD}@postgres:5432/roady
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      JWT_SECRET: ${JWT_SECRET}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      FIREBASE_CREDENTIALS: ${FIREBASE_CREDENTIALS}
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend/src:/app/src:ro
+    restart: unless-stopped
+
+  # Frontend Web
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: roady-web
+    ports:
+      - "3000:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  # Celery Worker (Background Tasks)
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: roady-worker
+    command: celery -A src.celery_app worker -l info -c 4
+    environment:
+      DATABASE_URL: postgresql://roady_user:${DB_PASSWORD}@postgres:5432/roady
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+
+  # Celery Beat (Scheduler)
+  scheduler:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: roady-scheduler
+    command: celery -A src.celery_app beat -l info
+    environment:
+      DATABASE_URL: postgresql://roady_user:${DB_PASSWORD}@postgres:5432/roady
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+    depends_on:
+      - worker
+    restart: unless-stopped
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: roady-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/certs:/etc/nginx/certs
+    depends_on:
+      - api
+      - web
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+
+# ============================================================
+# 4. KUBERNETES - Namespace & Config
+# ============================================================
+# --- k8s/namespace.yaml ---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: roady
+  labels:
+    app: roady
+    environment: production
+
+---
+# --- k8s/configmap.yaml ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: roady-config
+  namespace: roady
+data:
+  LOG_LEVEL: "info"
+  API_VERSION: "v1"
+  CORS_ORIGINS: "https://roady.construction,https://app.roady.construction"
+  MAX_WORKERS: "4"
+  TIMEZONE: "America/Montreal"
+
+---
+# --- k8s/secrets.yaml ---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: roady-secrets
+  namespace: roady
+type: Opaque
+stringData:
+  DATABASE_URL: postgresql://roady:password@postgres-service:5432/roady
+  REDIS_URL: redis://:password@redis-service:6379/0
+  JWT_SECRET: your-super-secret-jwt-key
+  ANTHROPIC_API_KEY: sk-ant-xxxxx
+  OPENAI_API_KEY: sk-xxxxx
+
+# ============================================================
+# 5. KUBERNETES - PostgreSQL StatefulSet
+# ============================================================
+# --- k8s/postgres.yaml ---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+  namespace: roady
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 50Gi
+  storageClassName: gp3
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: roady
+spec:
+  serviceName: postgres-service
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: roady
+            - name: POSTGRES_USER
+              value: roady
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: roady-secrets
+                  key: DB_PASSWORD
+          volumeMounts:
+            - name: postgres-storage
+              mountPath: /var/lib/postgresql/data
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "2Gi"
+              cpu: "1000m"
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "roady"]
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "roady"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: postgres-storage
+          persistentVolumeClaim:
+            claimName: postgres-pvc
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-service
+  namespace: roady
+spec:
+  selector:
+    app: postgres
+  ports:
+    - port: 5432
+      targetPort: 5432
+  clusterIP: None
+
+# ============================================================
+# 6. KUBERNETES - API Deployment
+# ============================================================
+# --- k8s/api-deployment.yaml ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: roady-api
+  namespace: roady
+  labels:
+    app: roady-api
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: roady-api
+  template:
+    metadata:
+      labels:
+        app: roady-api
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+    spec:
+      serviceAccountName: roady-api
+      containers:
+        - name: api
+          image: gcr.io/roady-project/roady-api:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: roady-config
+            - secretRef:
+                name: roady-secrets
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "1Gi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: roady-api
+                topologyKey: kubernetes.io/hostname
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: roady-api-service
+  namespace: roady
+spec:
+  selector:
+    app: roady-api
+  ports:
+    - port: 80
+      targetPort: 8000
+  type: ClusterIP
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: roady-api-hpa
+  namespace: roady
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: roady-api
+  minReplicas: 3
+  maxReplicas: 20
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+
+# ============================================================
+# 7. KUBERNETES - Ingress (NGINX)
+# ============================================================
+# --- k8s/ingress.yaml ---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: roady-ingress
+  namespace: roady
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+spec:
+  tls:
+    - hosts:
+        - api.roady.construction
+        - app.roady.construction
+      secretName: roady-tls
+  rules:
+    - host: api.roady.construction
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: roady-api-service
+                port:
+                  number: 80
+    - host: app.roady.construction
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: roady-web-service
+                port:
+                  number: 80
+
+# ============================================================
+# 8. HELM CHART - values.yaml
+# ============================================================
+# --- helm/roady/values.yaml ---
+# Global settings
+global:
+  environment: production
+  domain: roady.construction
+
+# API Configuration
+api:
+  replicaCount: 3
+  image:
+    repository: gcr.io/roady-project/roady-api
+    tag: latest
+    pullPolicy: Always
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+    limits:
+      memory: 1Gi
+      cpu: 500m
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 20
+    targetCPUUtilization: 70
+
+# Web Configuration
+web:
+  replicaCount: 2
+  image:
+    repository: gcr.io/roady-project/roady-web
+    tag: latest
+
+# Database
+postgresql:
+  enabled: true
+  auth:
+    database: roady
+    username: roady
+  primary:
+    persistence:
+      size: 50Gi
+  metrics:
+    enabled: true
+
+# Redis
+redis:
+  enabled: true
+  auth:
+    enabled: true
+  master:
+    persistence:
+      size: 10Gi
+
+# Monitoring
+prometheus:
+  enabled: true
+  
+grafana:
+  enabled: true
+  adminPassword: ${GRAFANA_PASSWORD}
+
+# ============================================================
+# 9. GITHUB ACTIONS - CI/CD Pipeline
+# ============================================================
+# --- .github/workflows/deploy.yml ---
+name: Deploy ROADY
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  PROJECT_ID: roady-project
+  GKE_CLUSTER: roady-cluster
+  GKE_ZONE: us-east1-b
+  API_IMAGE: gcr.io/roady-project/roady-api
+  WEB_IMAGE: gcr.io/roady-project/roady-web
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install pytest pytest-cov
+      
+      - name: Run tests
+        run: |
+          cd backend
+          pytest --cov=src --cov-report=xml
+      
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+
+  build-and-push:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Auth to GCP
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+      
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+      
+      - name: Configure Docker
+        run: gcloud auth configure-docker
+      
+      - name: Build & Push API
+        run: |
+          docker build -t $API_IMAGE:${{ github.sha }} -t $API_IMAGE:latest ./backend
+          docker push $API_IMAGE:${{ github.sha }}
+          docker push $API_IMAGE:latest
+      
+      - name: Build & Push Web
+        run: |
+          docker build -t $WEB_IMAGE:${{ github.sha }} -t $WEB_IMAGE:latest ./frontend
+          docker push $WEB_IMAGE:${{ github.sha }}
+          docker push $WEB_IMAGE:latest
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Auth to GCP
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+      
+      - name: Get GKE credentials
+        uses: google-github-actions/get-gke-credentials@v1
+        with:
+          cluster_name: ${{ env.GKE_CLUSTER }}
+          location: ${{ env.GKE_ZONE }}
+      
+      - name: Deploy to GKE
+        run: |
+          kubectl set image deployment/roady-api api=$API_IMAGE:${{ github.sha }} -n roady
+          kubectl set image deployment/roady-web web=$WEB_IMAGE:${{ github.sha }} -n roady
+          kubectl rollout status deployment/roady-api -n roady
+          kubectl rollout status deployment/roady-web -n roady
+      
+      - name: Notify Slack
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          text: 'ROADY deployed to production! 🚀'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}

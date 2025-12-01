@@ -1,0 +1,667 @@
+/*
+╔══════════════════════════════════════════════════════════════════════════════╗
+║   🏢 OFFICE OPTIONS - STYLES                                                 ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+*/
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   OVERLAY & MODAL
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.oo-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.oo-modal {
+  background: #1a1a2e;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 900px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.5);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   HEADER
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.oo-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.oo-header-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.oo-header-icon {
+  font-size: 2.5rem;
+}
+
+.oo-header-info h2 {
+  margin: 0;
+  font-size: 1.3rem;
+  color: #fff;
+}
+
+.oo-header-info p {
+  margin: 4px 0 0 0;
+  color: #888;
+  font-size: 0.9rem;
+}
+
+.oo-close {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: #888;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.oo-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   BODY
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.oo-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Sidebar */
+.oo-sidebar {
+  width: 200px;
+  padding: 16px;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.1);
+  overflow-y: auto;
+}
+
+.oo-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 14px;
+  background: transparent;
+  border: none;
+  color: #888;
+  font-size: 0.9rem;
+  text-align: left;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 4px;
+}
+
+.oo-nav-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+}
+
+.oo-nav-item.active {
+  background: #6366f1;
+  color: #fff;
+}
+
+.oo-nav-item span {
+  font-size: 1.1rem;
+}
+
+/* Content */
+.oo-content {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.oo-section h3 {
+  margin: 0 0 8px 0;
+  font-size: 1.2rem;
+  color: #fff;
+}
+
+.oo-description {
+  color: #888;
+  margin: 0 0 24px 0;
+  font-size: 0.9rem;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   FORM FIELDS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.oo-field {
+  margin-bottom: 20px;
+}
+
+.oo-field label {
+  display: block;
+  color: #aaa;
+  font-size: 0.85rem;
+  margin-bottom: 8px;
+}
+
+.oo-field input[type="text"],
+.oo-field input[type="email"],
+.oo-field textarea,
+.oo-field select {
+  width: 100%;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  color: #fff;
+  font-size: 0.95rem;
+  transition: all 0.2s;
+}
+
+.oo-field input:focus,
+.oo-field textarea:focus,
+.oo-field select:focus {
+  outline: none;
+  border-color: #6366f1;
+  background: rgba(99, 102, 241, 0.1);
+}
+
+.oo-field textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.oo-field select {
+  cursor: pointer;
+}
+
+.oo-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* Range Input */
+.oo-field input[type="range"] {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  -webkit-appearance: none;
+}
+
+.oo-field input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  background: #6366f1;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.oo-range-labels {
+  display: flex;
+  justify-content: space-between;
+  color: #666;
+  font-size: 0.75rem;
+  margin-top: 6px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ICON PICKER
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.oo-icon-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.oo-icon-btn {
+  width: 44px;
+  height: 44px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid transparent;
+  border-radius: 10px;
+  font-size: 1.4rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.oo-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.oo-icon-btn.selected {
+  border-color: #6366f1;
+  background: rgba(99, 102, 241, 0.2);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   COLOR PICKER
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.oo-color-picker {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.oo-color-picker input[type="color"] {
+  width: 50px;
+  height: 40px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  background: transparent;
+}
+
+.oo-color-picker span {
+  color: #888;
+  font-family: monospace;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TOGGLE SWITCH
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.oo-toggle-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.oo-toggle-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 12px;
+  transition: all 0.2s;
+}
+
+.oo-toggle-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.oo-toggle-item.danger {
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.oo-toggle-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.oo-toggle-info span {
+  color: #fff;
+  font-size: 0.95rem;
+}
+
+.oo-toggle-info small {
+  color: #666;
+  font-size: 0.8rem;
+}
+
+/* Switch */
+.oo-switch {
+  position: relative;
+  width: 50px;
+  height: 28px;
+}
+
+.oo-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.oo-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 28px;
+  transition: all 0.3s;
+}
+
+.oo-slider::before {
+  content: '';
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  left: 3px;
+  bottom: 3px;
+  background: #fff;
+  border-radius: 50%;
+  transition: all 0.3s;
+}
+
+.oo-switch input:checked + .oo-slider {
+  background: #6366f1;
+}
+
+.oo-switch input:checked + .oo-slider::before {
+  transform: translateX(22px);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   THEME PICKER
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.oo-theme-picker {
+  display: flex;
+  gap: 10px;
+}
+
+.oo-theme-btn {
+  flex: 1;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid transparent;
+  border-radius: 12px;
+  color: #888;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.oo-theme-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.oo-theme-btn.selected {
+  border-color: #6366f1;
+  background: rgba(99, 102, 241, 0.2);
+  color: #fff;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   INTEGRATIONS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.oo-integrations-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.oo-integration-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  padding: 16px;
+  transition: all 0.2s;
+}
+
+.oo-integration-card.enabled {
+  border-color: rgba(16, 185, 129, 0.3);
+  background: rgba(16, 185, 129, 0.05);
+}
+
+.oo-integration-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.oo-integration-icon {
+  font-size: 1.8rem;
+  width: 50px;
+  height: 50px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.oo-integration-header > div {
+  flex: 1;
+}
+
+.oo-integration-header h4 {
+  margin: 0;
+  color: #fff;
+  font-size: 1rem;
+}
+
+.oo-integration-header small {
+  color: #666;
+  font-size: 0.8rem;
+}
+
+.oo-integration-config {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.oo-integration-config input {
+  width: 100%;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.9rem;
+}
+
+.oo-integration-config input:focus {
+  outline: none;
+  border-color: #6366f1;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DANGER ZONE
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.oo-danger-section {
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 16px;
+  padding: 20px;
+  background: rgba(239, 68, 68, 0.05);
+}
+
+.oo-danger-section h3 {
+  color: #ef4444;
+}
+
+.oo-danger-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.oo-danger-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+}
+
+.oo-danger-item h4 {
+  margin: 0 0 4px 0;
+  color: #fff;
+  font-size: 0.95rem;
+}
+
+.oo-danger-item p {
+  margin: 0;
+  color: #888;
+  font-size: 0.85rem;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   BUTTONS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.oo-btn-primary {
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.oo-btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px rgba(99, 102, 241, 0.3);
+}
+
+.oo-btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.oo-btn-secondary {
+  padding: 12px 24px;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 10px;
+  color: #888;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.oo-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+.oo-btn-danger {
+  padding: 10px 20px;
+  background: #ef4444;
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.oo-btn-danger:hover {
+  background: #dc2626;
+}
+
+.oo-btn-danger-secondary {
+  padding: 10px 20px;
+  background: rgba(239, 68, 68, 0.2);
+  border: none;
+  border-radius: 8px;
+  color: #ef4444;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.oo-btn-danger-secondary:hover {
+  background: rgba(239, 68, 68, 0.3);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   FOOTER
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.oo-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  .oo-body {
+    flex-direction: column;
+  }
+  
+  .oo-sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    overflow-x: auto;
+    padding: 8px;
+  }
+  
+  .oo-nav-item {
+    white-space: nowrap;
+    padding: 10px 14px;
+  }
+  
+  .oo-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .oo-theme-picker {
+    flex-direction: column;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SCROLLBAR
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.oo-content::-webkit-scrollbar,
+.oo-sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.oo-content::-webkit-scrollbar-track,
+.oo-sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.oo-content::-webkit-scrollbar-thumb,
+.oo-sidebar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+.oo-content::-webkit-scrollbar-thumb:hover,
+.oo-sidebar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}

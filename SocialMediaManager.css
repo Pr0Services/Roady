@@ -1,0 +1,425 @@
+/*
+╔══════════════════════════════════════════════════════════════════════════════╗
+║   🌐 SOCIAL MEDIA MANAGER - STYLES                                           ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+*/
+
+.sm-manager {
+  padding: 24px;
+  background: #0f0f1a;
+  min-height: 100vh;
+  color: #fff;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   HEADER
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.sm-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.sm-header-info h1 {
+  margin: 0 0 8px 0;
+  font-size: 2rem;
+}
+
+.sm-header-info p {
+  margin: 0;
+  color: #888;
+}
+
+.sm-header-stats {
+  display: flex;
+  gap: 16px;
+}
+
+.sm-stat-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px 24px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 12px;
+}
+
+.sm-stat-value {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #6366f1;
+}
+
+.sm-stat-label {
+  font-size: 0.85rem;
+  color: #888;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CATEGORIES
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.sm-categories {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.sm-category {
+  padding: 10px 20px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 25px;
+  color: #888;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sm-category:hover {
+  border-color: #6366f1;
+  color: #fff;
+}
+
+.sm-category.active {
+  background: #6366f1;
+  border-color: #6366f1;
+  color: #fff;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PLATFORMS GRID
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.sm-platforms-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.sm-platform-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
+  padding: 20px;
+  transition: all 0.3s;
+}
+
+.sm-platform-card:hover {
+  border-color: var(--platform-color);
+  transform: translateY(-4px);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+.sm-platform-card.connected {
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.sm-platform-card.connected::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: #10b981;
+  border-radius: 16px 16px 0 0;
+}
+
+.sm-platform-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.sm-platform-icon {
+  font-size: 2.5rem;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--platform-color) 20%, transparent);
+  border-radius: 14px;
+}
+
+.sm-platform-info {
+  flex: 1;
+}
+
+.sm-platform-info h3 {
+  margin: 0 0 4px 0;
+  font-size: 1.1rem;
+}
+
+.sm-platform-category {
+  font-size: 0.8rem;
+  color: #888;
+  text-transform: capitalize;
+}
+
+.sm-status-badge {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.sm-status-badge.connected {
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+}
+
+.sm-status-badge.disconnected {
+  background: rgba(255,255,255,0.1);
+  color: #888;
+}
+
+.sm-account-info {
+  padding: 12px;
+  background: rgba(16, 185, 129, 0.1);
+  border-radius: 10px;
+  margin-bottom: 16px;
+}
+
+.sm-account-name {
+  display: block;
+  font-weight: 600;
+  color: #10b981;
+}
+
+.sm-last-sync {
+  font-size: 0.75rem;
+  color: #888;
+}
+
+.sm-platform-features {
+  margin-bottom: 16px;
+}
+
+.sm-platform-features h4 {
+  margin: 0 0 8px 0;
+  font-size: 0.85rem;
+  color: #888;
+}
+
+.sm-platform-features ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.sm-platform-features li {
+  font-size: 0.85rem;
+  color: #aaa;
+  margin-bottom: 4px;
+}
+
+.sm-platform-actions {
+  display: flex;
+  gap: 10px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   BUTTONS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.sm-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sm-btn-connect {
+  flex: 1;
+  background: var(--platform-color);
+  color: #fff;
+}
+
+.sm-btn-connect:hover {
+  transform: scale(1.02);
+  box-shadow: 0 5px 20px color-mix(in srgb, var(--platform-color) 40%, transparent);
+}
+
+.sm-btn-refresh {
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+}
+
+.sm-btn-refresh:hover {
+  background: rgba(255,255,255,0.2);
+}
+
+.sm-btn-disconnect {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.sm-btn-disconnect:hover {
+  background: rgba(239, 68, 68, 0.3);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MODAL
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.sm-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.8);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.sm-modal {
+  background: #1a1a2e;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 480px;
+  overflow: hidden;
+  box-shadow: 0 25px 80px rgba(0,0,0,0.5);
+}
+
+.sm-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 24px;
+  color: #fff;
+}
+
+.sm-modal-icon {
+  font-size: 2.5rem;
+}
+
+.sm-modal-header h2 {
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+.sm-modal-body {
+  padding: 24px;
+}
+
+.sm-modal-body > p {
+  color: #aaa;
+  margin: 0 0 20px 0;
+}
+
+.sm-permissions {
+  background: rgba(255,255,255,0.03);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.sm-permissions h4 {
+  margin: 0 0 12px 0;
+  font-size: 0.95rem;
+}
+
+.sm-permissions ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sm-permissions li {
+  padding: 8px 0;
+  color: #10b981;
+  font-size: 0.9rem;
+}
+
+.sm-privacy-note {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: rgba(99, 102, 241, 0.1);
+  border-radius: 10px;
+}
+
+.sm-privacy-note span {
+  font-size: 1.5rem;
+}
+
+.sm-privacy-note p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #a5b4fc;
+}
+
+.sm-modal-footer {
+  display: flex;
+  gap: 12px;
+  padding: 20px 24px;
+  background: rgba(0,0,0,0.2);
+}
+
+.sm-btn-cancel {
+  flex: 1;
+  background: rgba(255,255,255,0.1);
+  color: #888;
+}
+
+.sm-btn-cancel:hover:not(:disabled) {
+  background: rgba(255,255,255,0.2);
+  color: #fff;
+}
+
+.sm-btn-authorize {
+  flex: 2;
+  color: #fff;
+}
+
+.sm-btn-authorize:hover:not(:disabled) {
+  transform: scale(1.02);
+}
+
+.sm-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  .sm-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 20px;
+  }
+  
+  .sm-header-stats {
+    width: 100%;
+  }
+  
+  .sm-stat-badge {
+    flex: 1;
+  }
+  
+  .sm-platforms-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .sm-modal {
+    margin: 20px;
+  }
+}

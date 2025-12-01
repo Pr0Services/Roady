@@ -1,0 +1,656 @@
+# ============================================
+# ROADY CONSTRUCTION - MONITORING COMPLET
+# ============================================
+# Stack: Prometheus + Grafana + AlertManager + Loki
+# Structure: monitoring/
+# ├── prometheus/
+# ├── grafana/
+# ├── alertmanager/
+# └── docker-compose.monitoring.yml
+
+# ============================================
+# docker-compose.monitoring.yml
+# ============================================
+version: '3.9'
+
+services:
+  # === Prometheus ===
+  prometheus:
+    image: prom/prometheus:v2.48.0
+    container_name: roady-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./monitoring/prometheus/rules/:/etc/prometheus/rules/
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    restart: unless-stopped
+    networks:
+      - roady-network
+
+  # === Grafana ===
+  grafana:
+    image: grafana/grafana:10.2.0
+    container_name: roady-grafana
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=https://monitoring.roady.construction
+      - GF_SMTP_ENABLED=true
+      - GF_SMTP_HOST=smtp.sendgrid.net:587
+      - GF_SMTP_USER=apikey
+      - GF_SMTP_PASSWORD=${SENDGRID_API_KEY}
+    volumes:
+      - ./monitoring/grafana/provisioning/:/etc/grafana/provisioning/
+      - ./monitoring/grafana/dashboards/:/var/lib/grafana/dashboards/
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    networks:
+      - roady-network
+
+  # === AlertManager ===
+  alertmanager:
+    image: prom/alertmanager:v0.26.0
+    container_name: roady-alertmanager
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+      - alertmanager_data:/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+    restart: unless-stopped
+    networks:
+      - roady-network
+
+  # === Loki (Logs) ===
+  loki:
+    image: grafana/loki:2.9.0
+    container_name: roady-loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./monitoring/loki/loki-config.yml:/etc/loki/local-config.yaml
+      - loki_data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    restart: unless-stopped
+    networks:
+      - roady-network
+
+  # === Promtail (Log Shipper) ===
+  promtail:
+    image: grafana/promtail:2.9.0
+    container_name: roady-promtail
+    volumes:
+      - ./monitoring/promtail/promtail-config.yml:/etc/promtail/config.yml
+      - /var/log:/var/log:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+    restart: unless-stopped
+    networks:
+      - roady-network
+
+  # === Node Exporter ===
+  node-exporter:
+    image: prom/node-exporter:v1.7.0
+    container_name: roady-node-exporter
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    restart: unless-stopped
+    networks:
+      - roady-network
+
+  # === Postgres Exporter ===
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.15.0
+    container_name: roady-postgres-exporter
+    ports:
+      - "9187:9187"
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}?sslmode=disable"
+    restart: unless-stopped
+    networks:
+      - roady-network
+
+  # === Redis Exporter ===
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.55.0
+    container_name: roady-redis-exporter
+    ports:
+      - "9121:9121"
+    environment:
+      REDIS_ADDR: "redis:6379"
+    restart: unless-stopped
+    networks:
+      - roady-network
+
+volumes:
+  prometheus_data:
+  grafana_data:
+  alertmanager_data:
+  loki_data:
+
+networks:
+  roady-network:
+    external: true
+
+# ============================================
+# monitoring/prometheus/prometheus.yml
+# ============================================
+---
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'roady-monitor'
+    environment: 'production'
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['alertmanager:9093']
+
+rule_files:
+  - /etc/prometheus/rules/*.yml
+
+scrape_configs:
+  # === Prometheus itself ===
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # === ROADY API ===
+  - job_name: 'roady-api'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['api:8000']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'roady-api'
+
+  # === Node Exporter ===
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node-exporter:9100']
+
+  # === PostgreSQL ===
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+
+  # === Redis ===
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+
+  # === Celery Workers ===
+  - job_name: 'celery'
+    static_configs:
+      - targets: ['celery:9808']
+
+  # === Kubernetes (si applicable) ===
+  - job_name: 'kubernetes-pods'
+    kubernetes_sd_configs:
+      - role: pod
+        namespaces:
+          names: ['roady']
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+        action: keep
+        regex: true
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+        action: replace
+        target_label: __metrics_path__
+        regex: (.+)
+
+# ============================================
+# monitoring/prometheus/rules/alerts.yml
+# ============================================
+---
+groups:
+  - name: roady-api-alerts
+    interval: 30s
+    rules:
+      # === High Error Rate ===
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(http_requests_total{status=~"5.."}[5m])) 
+          / sum(rate(http_requests_total[5m])) * 100 > 5
+        for: 5m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value | printf \"%.2f\" }}% (threshold: 5%)"
+          runbook_url: "https://docs.roady.construction/runbooks/high-error-rate"
+
+      # === High Latency ===
+      - alert: HighLatency
+        expr: |
+          histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le)) > 2
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "High API latency detected"
+          description: "P95 latency is {{ $value | printf \"%.2f\" }}s (threshold: 2s)"
+
+      # === API Down ===
+      - alert: APIDown
+        expr: up{job="roady-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: infrastructure
+        annotations:
+          summary: "ROADY API is down"
+          description: "The API has been unreachable for more than 1 minute"
+          runbook_url: "https://docs.roady.construction/runbooks/api-down"
+
+      # === High Memory Usage ===
+      - alert: HighMemoryUsage
+        expr: |
+          (container_memory_usage_bytes{container="api"} 
+          / container_spec_memory_limit_bytes{container="api"}) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+          team: infrastructure
+        annotations:
+          summary: "High memory usage on API container"
+          description: "Memory usage is {{ $value | printf \"%.2f\" }}%"
+
+      # === High CPU Usage ===
+      - alert: HighCPUUsage
+        expr: |
+          sum(rate(container_cpu_usage_seconds_total{container="api"}[5m])) 
+          / sum(container_spec_cpu_quota{container="api"}/container_spec_cpu_period{container="api"}) * 100 > 80
+        for: 10m
+        labels:
+          severity: warning
+          team: infrastructure
+        annotations:
+          summary: "High CPU usage on API"
+          description: "CPU usage is {{ $value | printf \"%.2f\" }}%"
+
+  - name: roady-database-alerts
+    rules:
+      # === Database Connection Pool Exhausted ===
+      - alert: DatabaseConnectionPoolExhausted
+        expr: pg_stat_activity_count > 90
+        for: 5m
+        labels:
+          severity: critical
+          team: database
+        annotations:
+          summary: "PostgreSQL connection pool nearly exhausted"
+          description: "{{ $value }} active connections (max: 100)"
+
+      # === Database Slow Queries ===
+      - alert: SlowQueries
+        expr: |
+          rate(pg_stat_statements_seconds_total[5m]) 
+          / rate(pg_stat_statements_calls_total[5m]) > 1
+        for: 10m
+        labels:
+          severity: warning
+          team: database
+        annotations:
+          summary: "Slow database queries detected"
+          description: "Average query time: {{ $value | printf \"%.2f\" }}s"
+
+      # === Database Replication Lag ===
+      - alert: ReplicationLag
+        expr: pg_replication_lag > 30
+        for: 5m
+        labels:
+          severity: critical
+          team: database
+        annotations:
+          summary: "PostgreSQL replication lag too high"
+          description: "Replication lag: {{ $value }}s"
+
+  - name: roady-redis-alerts
+    rules:
+      # === Redis Memory ===
+      - alert: RedisHighMemory
+        expr: redis_memory_used_bytes / redis_memory_max_bytes * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+          team: infrastructure
+        annotations:
+          summary: "Redis memory usage high"
+          description: "Redis memory usage: {{ $value | printf \"%.2f\" }}%"
+
+      # === Redis Down ===
+      - alert: RedisDown
+        expr: redis_up == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: infrastructure
+        annotations:
+          summary: "Redis is down"
+          description: "Redis has been unreachable for more than 1 minute"
+
+  - name: roady-business-alerts
+    rules:
+      # === Low LLM Success Rate ===
+      - alert: LowLLMSuccessRate
+        expr: |
+          sum(rate(llm_requests_total{status="success"}[10m])) 
+          / sum(rate(llm_requests_total[10m])) * 100 < 95
+        for: 10m
+        labels:
+          severity: warning
+          team: ai
+        annotations:
+          summary: "LLM success rate is low"
+          description: "LLM success rate: {{ $value | printf \"%.2f\" }}%"
+
+      # === High LLM Costs ===
+      - alert: HighLLMCosts
+        expr: sum(increase(llm_tokens_total[1h])) * 0.00001 > 50
+        for: 1h
+        labels:
+          severity: warning
+          team: finance
+        annotations:
+          summary: "High LLM costs in the last hour"
+          description: "Estimated cost: ${{ $value | printf \"%.2f\" }}"
+
+# ============================================
+# monitoring/alertmanager/alertmanager.yml
+# ============================================
+---
+global:
+  resolve_timeout: 5m
+  smtp_smarthost: 'smtp.sendgrid.net:587'
+  smtp_from: 'alerts@roady.construction'
+  smtp_auth_username: 'apikey'
+  smtp_auth_password: '${SENDGRID_API_KEY}'
+
+  slack_api_url: '${SLACK_WEBHOOK_URL}'
+
+route:
+  group_by: ['alertname', 'severity', 'team']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  receiver: 'default'
+  
+  routes:
+    # Critical alerts - immediate
+    - match:
+        severity: critical
+      receiver: 'critical-alerts'
+      group_wait: 10s
+      repeat_interval: 1h
+    
+    # Database team
+    - match:
+        team: database
+      receiver: 'database-team'
+    
+    # AI team
+    - match:
+        team: ai
+      receiver: 'ai-team'
+
+receivers:
+  - name: 'default'
+    slack_configs:
+      - channel: '#roady-alerts'
+        send_resolved: true
+        title: '{{ .Status | toUpper }}: {{ .CommonLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+
+  - name: 'critical-alerts'
+    slack_configs:
+      - channel: '#roady-critical'
+        send_resolved: true
+        title: '🚨 CRITICAL: {{ .CommonLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}\nRunbook: {{ .Annotations.runbook_url }}{{ end }}'
+    pagerduty_configs:
+      - service_key: '${PAGERDUTY_SERVICE_KEY}'
+        severity: critical
+    email_configs:
+      - to: 'oncall@roady.construction'
+        send_resolved: true
+
+  - name: 'database-team'
+    slack_configs:
+      - channel: '#roady-database'
+        send_resolved: true
+    email_configs:
+      - to: 'dba@roady.construction'
+
+  - name: 'ai-team'
+    slack_configs:
+      - channel: '#roady-ai'
+        send_resolved: true
+
+inhibit_rules:
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'instance']
+
+# ============================================
+# monitoring/grafana/dashboards/roady-overview.json
+# ============================================
+# (Extrait - Dashboard JSON complet disponible)
+---
+# Dashboard provisioning config
+# monitoring/grafana/provisioning/dashboards/dashboards.yml
+apiVersion: 1
+
+providers:
+  - name: 'ROADY Dashboards'
+    orgId: 1
+    folder: 'ROADY'
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /var/lib/grafana/dashboards
+
+# ============================================
+# backend/src/monitoring/metrics.py
+# ============================================
+# Python metrics integration
+"""
+from prometheus_client import Counter, Histogram, Gauge, generate_latest
+from functools import wraps
+import time
+
+# === Counters ===
+http_requests_total = Counter(
+    'http_requests_total',
+    'Total HTTP requests',
+    ['method', 'endpoint', 'status']
+)
+
+llm_requests_total = Counter(
+    'llm_requests_total',
+    'Total LLM API requests',
+    ['provider', 'model', 'status']
+)
+
+llm_tokens_total = Counter(
+    'llm_tokens_total',
+    'Total LLM tokens used',
+    ['provider', 'model', 'type']  # type: input/output
+)
+
+# === Histograms ===
+http_request_duration = Histogram(
+    'http_request_duration_seconds',
+    'HTTP request duration in seconds',
+    ['method', 'endpoint'],
+    buckets=[0.01, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0]
+)
+
+llm_request_duration = Histogram(
+    'llm_request_duration_seconds',
+    'LLM request duration',
+    ['provider', 'model'],
+    buckets=[0.5, 1.0, 2.0, 5.0, 10.0, 30.0, 60.0]
+)
+
+db_query_duration = Histogram(
+    'db_query_duration_seconds',
+    'Database query duration',
+    ['query_type'],
+    buckets=[0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0]
+)
+
+# === Gauges ===
+active_users = Gauge(
+    'active_users',
+    'Currently active users'
+)
+
+active_projects = Gauge(
+    'active_projects',
+    'Number of active projects'
+)
+
+celery_queue_length = Gauge(
+    'celery_queue_length',
+    'Number of tasks in Celery queue',
+    ['queue_name']
+)
+
+# === Decorators ===
+def track_request_metrics(endpoint: str):
+    def decorator(func):
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            method = kwargs.get('request', args[0] if args else None)
+            method_name = getattr(method, 'method', 'UNKNOWN')
+            
+            start_time = time.time()
+            try:
+                response = await func(*args, **kwargs)
+                status = getattr(response, 'status_code', 200)
+                return response
+            except Exception as e:
+                status = 500
+                raise
+            finally:
+                duration = time.time() - start_time
+                http_requests_total.labels(
+                    method=method_name,
+                    endpoint=endpoint,
+                    status=status
+                ).inc()
+                http_request_duration.labels(
+                    method=method_name,
+                    endpoint=endpoint
+                ).observe(duration)
+        return wrapper
+    return decorator
+
+def track_llm_metrics(provider: str, model: str):
+    def decorator(func):
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            start_time = time.time()
+            try:
+                result = await func(*args, **kwargs)
+                llm_requests_total.labels(
+                    provider=provider,
+                    model=model,
+                    status='success'
+                ).inc()
+                
+                # Track tokens if available
+                if 'usage' in result:
+                    llm_tokens_total.labels(
+                        provider=provider,
+                        model=model,
+                        type='input'
+                    ).inc(result['usage'].get('input_tokens', 0))
+                    llm_tokens_total.labels(
+                        provider=provider,
+                        model=model,
+                        type='output'
+                    ).inc(result['usage'].get('output_tokens', 0))
+                
+                return result
+            except Exception as e:
+                llm_requests_total.labels(
+                    provider=provider,
+                    model=model,
+                    status='error'
+                ).inc()
+                raise
+            finally:
+                duration = time.time() - start_time
+                llm_request_duration.labels(
+                    provider=provider,
+                    model=model
+                ).observe(duration)
+        return wrapper
+    return decorator
+
+# === FastAPI Middleware ===
+from starlette.middleware.base import BaseHTTPMiddleware
+
+class MetricsMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        start_time = time.time()
+        response = await call_next(request)
+        duration = time.time() - start_time
+        
+        http_requests_total.labels(
+            method=request.method,
+            endpoint=request.url.path,
+            status=response.status_code
+        ).inc()
+        
+        http_request_duration.labels(
+            method=request.method,
+            endpoint=request.url.path
+        ).observe(duration)
+        
+        return response
+
+# === Metrics Endpoint ===
+from fastapi import APIRouter
+from fastapi.responses import PlainTextResponse
+
+metrics_router = APIRouter()
+
+@metrics_router.get("/metrics", response_class=PlainTextResponse)
+async def get_metrics():
+    return generate_latest()
+"""

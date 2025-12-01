@@ -1,0 +1,553 @@
+# ============================================================
+# ROADY CONSTRUCTION - MONITORING CONFIGURATION
+# Prometheus + Grafana + Alertmanager
+# ============================================================
+
+# ============================================================
+# docker-compose.monitoring.yml
+# ============================================================
+version: '3.9'
+
+services:
+  prometheus:
+    image: prom/prometheus:v2.47.0
+    container_name: roady-prometheus
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./monitoring/prometheus/alerts.yml:/etc/prometheus/alerts.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    ports:
+      - "9090:9090"
+    networks:
+      - roady-network
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:10.1.0
+    container_name: roady-grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=http://localhost:3001
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+    ports:
+      - "3001:3000"
+    networks:
+      - roady-network
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+  alertmanager:
+    image: prom/alertmanager:v0.26.0
+    container_name: roady-alertmanager
+    volumes:
+      - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+    ports:
+      - "9093:9093"
+    networks:
+      - roady-network
+    restart: unless-stopped
+
+  node-exporter:
+    image: prom/node-exporter:v1.6.1
+    container_name: roady-node-exporter
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    ports:
+      - "9100:9100"
+    networks:
+      - roady-network
+    restart: unless-stopped
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.14.0
+    container_name: roady-postgres-exporter
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}?sslmode=disable"
+    ports:
+      - "9187:9187"
+    networks:
+      - roady-network
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.55.0
+    container_name: roady-redis-exporter
+    environment:
+      REDIS_ADDR: "redis://redis:6379"
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    ports:
+      - "9121:9121"
+    networks:
+      - roady-network
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+volumes:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  roady-network:
+    external: true
+
+---
+# ============================================================
+# monitoring/prometheus/prometheus.yml
+# ============================================================
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'roady-monitor'
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['alertmanager:9093']
+
+rule_files:
+  - 'alerts.yml'
+
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # ROADY API
+  - job_name: 'roady-api'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['api:8000']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'roady-api'
+
+  # Node Exporter (System metrics)
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+
+  # PostgreSQL
+  - job_name: 'postgresql'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+
+  # Redis
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+
+  # Docker containers (via cAdvisor si ajouté)
+  # - job_name: 'cadvisor'
+  #   static_configs:
+  #     - targets: ['cadvisor:8080']
+
+---
+# ============================================================
+# monitoring/prometheus/alerts.yml
+# ============================================================
+groups:
+  - name: roady-alerts
+    rules:
+      # ====== API Alerts ======
+      - alert: APIHighLatency
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="roady-api"}[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API latency is high"
+          description: "95th percentile latency is above 1 second for 5 minutes"
+
+      - alert: APIHighErrorRate
+        expr: rate(http_requests_total{job="roady-api", status=~"5.."}[5m]) / rate(http_requests_total{job="roady-api"}[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High API error rate"
+          description: "Error rate is above 5% for 5 minutes"
+
+      - alert: APIDown
+        expr: up{job="roady-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "ROADY API is down"
+          description: "The API has been unreachable for more than 1 minute"
+
+      # ====== Database Alerts ======
+      - alert: PostgreSQLDown
+        expr: pg_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL is down"
+          description: "PostgreSQL database is not responding"
+
+      - alert: PostgreSQLHighConnections
+        expr: pg_stat_activity_count > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High number of PostgreSQL connections"
+          description: "Database connections are above 80"
+
+      - alert: PostgreSQLSlowQueries
+        expr: rate(pg_stat_activity_max_tx_duration{datname="roady"}[5m]) > 60
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Slow database queries detected"
+          description: "Queries taking longer than 60 seconds"
+
+      # ====== Redis Alerts ======
+      - alert: RedisDown
+        expr: redis_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis is down"
+          description: "Redis cache is not responding"
+
+      - alert: RedisHighMemory
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis memory usage high"
+          description: "Redis is using more than 90% of available memory"
+
+      # ====== System Alerts ======
+      - alert: HighCPUUsage
+        expr: 100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage is above 80% for 10 minutes"
+
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is above 85% for 10 minutes"
+
+      - alert: DiskSpaceLow
+        expr: (1 - (node_filesystem_avail_bytes / node_filesystem_size_bytes)) * 100 > 85
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Disk space running low"
+          description: "Disk usage is above 85%"
+
+      # ====== Business Alerts ======
+      - alert: LLMHighCost
+        expr: sum(rate(llm_cost_usd_total[1h])) * 24 > 50
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "LLM costs are high"
+          description: "Projected daily LLM costs exceed $50"
+
+      - alert: TooManyFailedLogins
+        expr: rate(auth_failed_logins_total[15m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High rate of failed logins"
+          description: "Possible brute force attack detected"
+
+---
+# ============================================================
+# monitoring/alertmanager/alertmanager.yml
+# ============================================================
+global:
+  smtp_smarthost: 'smtp.gmail.com:587'
+  smtp_from: 'alerts@roady.construction'
+  smtp_auth_username: '${SMTP_USER}'
+  smtp_auth_password: '${SMTP_PASSWORD}'
+
+route:
+  group_by: ['alertname', 'severity']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  receiver: 'default-receiver'
+  routes:
+    - match:
+        severity: critical
+      receiver: 'critical-receiver'
+      continue: true
+    - match:
+        severity: warning
+      receiver: 'warning-receiver'
+
+receivers:
+  - name: 'default-receiver'
+    email_configs:
+      - to: 'ops@roady.construction'
+
+  - name: 'critical-receiver'
+    email_configs:
+      - to: 'ops@roady.construction,cto@roady.construction'
+    slack_configs:
+      - api_url: '${SLACK_WEBHOOK_URL}'
+        channel: '#alerts-critical'
+        title: '🚨 CRITICAL: {{ .GroupLabels.alertname }}'
+        text: '{{ .Annotations.description }}'
+
+  - name: 'warning-receiver'
+    slack_configs:
+      - api_url: '${SLACK_WEBHOOK_URL}'
+        channel: '#alerts'
+        title: '⚠️ Warning: {{ .GroupLabels.alertname }}'
+        text: '{{ .Annotations.description }}'
+
+---
+# ============================================================
+# monitoring/grafana/provisioning/datasources/datasources.yml
+# ============================================================
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false
+
+  - name: PostgreSQL
+    type: postgres
+    url: postgres:5432
+    database: roady
+    user: ${DB_USER}
+    secureJsonData:
+      password: ${DB_PASSWORD}
+    jsonData:
+      sslmode: disable
+      maxOpenConns: 5
+      maxIdleConns: 2
+
+---
+# ============================================================
+# monitoring/grafana/provisioning/dashboards/dashboards.yml
+# ============================================================
+apiVersion: 1
+
+providers:
+  - name: 'ROADY Dashboards'
+    orgId: 1
+    folder: 'ROADY'
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /var/lib/grafana/dashboards
+
+---
+# ============================================================
+# monitoring/grafana/dashboards/roady-overview.json
+# ============================================================
+{
+  "dashboard": {
+    "title": "ROADY Construction - Overview",
+    "uid": "roady-overview",
+    "tags": ["roady", "overview"],
+    "timezone": "browser",
+    "refresh": "30s",
+    "panels": [
+      {
+        "title": "API Requests/sec",
+        "type": "stat",
+        "gridPos": {"x": 0, "y": 0, "w": 4, "h": 4},
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total{job='roady-api'}[5m]))",
+            "legendFormat": "req/s"
+          }
+        ]
+      },
+      {
+        "title": "API Latency P95",
+        "type": "stat",
+        "gridPos": {"x": 4, "y": 0, "w": 4, "h": 4},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job='roady-api'}[5m]))",
+            "legendFormat": "p95"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 0.5},
+                {"color": "red", "value": 1}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "title": "Error Rate",
+        "type": "stat",
+        "gridPos": {"x": 8, "y": 0, "w": 4, "h": 4},
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total{job='roady-api',status=~'5..'}[5m])) / sum(rate(http_requests_total{job='roady-api'}[5m])) * 100",
+            "legendFormat": "errors"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 1},
+                {"color": "red", "value": 5}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "title": "Active Users",
+        "type": "stat",
+        "gridPos": {"x": 12, "y": 0, "w": 4, "h": 4},
+        "targets": [
+          {
+            "expr": "roady_active_users_total",
+            "legendFormat": "users"
+          }
+        ]
+      },
+      {
+        "title": "LLM Cost Today",
+        "type": "stat",
+        "gridPos": {"x": 16, "y": 0, "w": 4, "h": 4},
+        "targets": [
+          {
+            "expr": "sum(increase(llm_cost_usd_total[24h]))",
+            "legendFormat": "cost"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyUSD"
+          }
+        }
+      },
+      {
+        "title": "DB Connections",
+        "type": "stat",
+        "gridPos": {"x": 20, "y": 0, "w": 4, "h": 4},
+        "targets": [
+          {
+            "expr": "pg_stat_activity_count{datname='roady'}",
+            "legendFormat": "connections"
+          }
+        ]
+      },
+      {
+        "title": "API Traffic",
+        "type": "timeseries",
+        "gridPos": {"x": 0, "y": 4, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total{job='roady-api'}[5m])) by (method)",
+            "legendFormat": "{{method}}"
+          }
+        ]
+      },
+      {
+        "title": "Response Time Distribution",
+        "type": "heatmap",
+        "gridPos": {"x": 12, "y": 4, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "sum(rate(http_request_duration_seconds_bucket{job='roady-api'}[5m])) by (le)",
+            "legendFormat": "{{le}}"
+          }
+        ]
+      },
+      {
+        "title": "System Resources",
+        "type": "timeseries",
+        "gridPos": {"x": 0, "y": 12, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "100 - (avg(rate(node_cpu_seconds_total{mode='idle'}[5m])) * 100)",
+            "legendFormat": "CPU %"
+          },
+          {
+            "expr": "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100",
+            "legendFormat": "Memory %"
+          }
+        ]
+      },
+      {
+        "title": "LLM Usage by Provider",
+        "type": "piechart",
+        "gridPos": {"x": 12, "y": 12, "w": 6, "h": 8},
+        "targets": [
+          {
+            "expr": "sum(increase(llm_requests_total[24h])) by (provider)",
+            "legendFormat": "{{provider}}"
+          }
+        ]
+      },
+      {
+        "title": "Top Endpoints",
+        "type": "table",
+        "gridPos": {"x": 18, "y": 12, "w": 6, "h": 8},
+        "targets": [
+          {
+            "expr": "topk(10, sum(rate(http_requests_total{job='roady-api'}[1h])) by (endpoint))",
+            "legendFormat": "{{endpoint}}"
+          }
+        ]
+      }
+    ]
+  }
+}

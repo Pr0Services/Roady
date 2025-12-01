@@ -1,0 +1,308 @@
+/*
+╔══════════════════════════════════════════════════════════════════════════════╗
+║   📅 ROADY - ADVANCED MEETING SYSTEM                                         ║
+║   Token Budgeting, Workflow Assignment, Task Delegation                      ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+*/
+
+import React, { useState, useMemo } from 'react';
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════════════════════════════════════
+
+export const TOKEN_PRICING = {
+  'gpt-4o': { input: 0.005, output: 0.015, name: 'GPT-4o' },
+  'gpt-4o-mini': { input: 0.00015, output: 0.0006, name: 'GPT-4o Mini' },
+  'gpt-4-turbo': { input: 0.01, output: 0.03, name: 'GPT-4 Turbo' },
+  'claude-3-opus': { input: 0.015, output: 0.075, name: 'Claude 3 Opus' },
+  'claude-3-sonnet': { input: 0.003, output: 0.015, name: 'Claude 3 Sonnet' },
+  'claude-3-haiku': { input: 0.00025, output: 0.00125, name: 'Claude 3 Haiku' }
+};
+
+export const MEETING_TEMPLATES = [
+  { id: 'brainstorm', name: '💡 Brainstorming', defaultBudget: 50000, suggestedAgents: 3 },
+  { id: 'planning', name: '📋 Sprint Planning', defaultBudget: 30000, suggestedAgents: 4 },
+  { id: 'review', name: '🔍 Code Review', defaultBudget: 40000, suggestedAgents: 2 },
+  { id: 'standup', name: '🌅 Daily Standup', defaultBudget: 10000, suggestedAgents: 5 },
+  { id: 'retrospective', name: '🔄 Retrospective', defaultBudget: 25000, suggestedAgents: 4 },
+  { id: 'creative', name: '🎨 Creative Session', defaultBudget: 60000, suggestedAgents: 3 },
+  { id: 'technical', name: '⚙️ Technical Discussion', defaultBudget: 45000, suggestedAgents: 3 },
+  { id: 'custom', name: '✨ Custom', defaultBudget: 20000, suggestedAgents: 2 }
+];
+
+export const WORKFLOW_TEMPLATES = [
+  { id: 'content-pipeline', name: '📝 Content Creation', icon: '📝', steps: ['Research', 'Draft', 'Review', 'Edit', 'Publish'], estimatedTokens: 15000, suggestedOffice: 'marketing' },
+  { id: 'dev-cycle', name: '💻 Development Cycle', icon: '💻', steps: ['Design', 'Implement', 'Test', 'Review', 'Deploy'], estimatedTokens: 25000, suggestedOffice: 'engineering' },
+  { id: 'support-ticket', name: '🎧 Support Ticket', icon: '🎧', steps: ['Receive', 'Analyze', 'Resolve', 'Follow-up'], estimatedTokens: 8000, suggestedOffice: 'support' },
+  { id: 'research', name: '🔬 Research & Analysis', icon: '🔬', steps: ['Gather', 'Analyze', 'Synthesize', 'Report'], estimatedTokens: 20000, suggestedOffice: 'research' },
+  { id: 'social-campaign', name: '📱 Social Campaign', icon: '📱', steps: ['Strategy', 'Create', 'Schedule', 'Monitor'], estimatedTokens: 12000, suggestedOffice: 'marketing' },
+  { id: 'onboarding', name: '👋 Client Onboarding', icon: '👋', steps: ['Welcome', 'Setup', 'Training', 'Check-in'], estimatedTokens: 10000, suggestedOffice: 'sales' }
+];
+
+// ═══════════════════════════════════════════════════════════════════════════
+// COMPONENT
+// ═══════════════════════════════════════════════════════════════════════════
+
+const AdvancedMeetingSystem = ({ isOpen, onClose, agents = [], offices = [], onCreateMeeting, onStartMeeting, onEndMeeting, onAssignTask }) => {
+  
+  const [activeTab, setActiveTab] = useState('create');
+  const [activeMeeting, setActiveMeeting] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [inputMessage, setInputMessage] = useState('');
+  const [showTaskModal, setShowTaskModal] = useState(false);
+  
+  const [meetingConfig, setMeetingConfig] = useState({
+    name: '', template: 'brainstorm', description: '', selectedAgents: [],
+    tokenBudget: 50000, model: 'gpt-4o-mini', allowBudgetOverflow: false,
+    overflowLimit: 10, autoEndOnBudget: true, recordTranscript: true,
+    generateSummary: true, assignedOffice: '', duration: 30
+  });
+
+  const [tokenUsage, setTokenUsage] = useState({ total: 0, byAgent: {}, history: [] });
+
+  const [newTask, setNewTask] = useState({
+    name: '', description: '', assignedAgent: '', targetOffice: '',
+    workflow: '', priority: 'medium', deadline: '', estimatedTokens: 5000
+  });
+
+  // Computed
+  const budgetUsagePercent = (tokenUsage.total / meetingConfig.tokenBudget) * 100;
+  const remainingBudget = meetingConfig.tokenBudget - tokenUsage.total;
+  
+  const estimatedCost = useMemo(() => {
+    const p = TOKEN_PRICING[meetingConfig.model];
+    if (!p) return 0;
+    return (meetingConfig.tokenBudget * 0.7 / 1000 * p.input) + (meetingConfig.tokenBudget * 0.3 / 1000 * p.output);
+  }, [meetingConfig.tokenBudget, meetingConfig.model]);
+
+  const availableAgents = agents.filter(a => a.status === 'available' || a.status === 'active');
+
+  // Handlers
+  const updateConfig = (k, v) => setMeetingConfig(p => ({ ...p, [k]: v }));
+
+  const handleTemplateChange = (id) => {
+    const t = MEETING_TEMPLATES.find(x => x.id === id);
+    if (t) setMeetingConfig(p => ({ ...p, template: id, tokenBudget: t.defaultBudget }));
+  };
+
+  const toggleAgent = (id) => {
+    setMeetingConfig(p => ({
+      ...p, selectedAgents: p.selectedAgents.includes(id) ? p.selectedAgents.filter(x => x !== id) : [...p.selectedAgents, id]
+    }));
+  };
+
+  const handleCreateMeeting = () => {
+    if (!meetingConfig.name || meetingConfig.selectedAgents.length === 0) return;
+    const meeting = { id: `mtg_${Date.now()}`, ...meetingConfig, status: 'scheduled', createdAt: new Date().toISOString() };
+    onCreateMeeting?.(meeting);
+    setActiveMeeting(meeting);
+    setActiveTab('active');
+    setMessages([{ id: 1, type: 'system', content: `🎯 Meeting "${meeting.name}" created. Budget: ${meeting.tokenBudget.toLocaleString()} tokens`, timestamp: new Date() }]);
+  };
+
+  const handleStartMeeting = () => {
+    if (!activeMeeting) return;
+    setActiveMeeting(p => ({ ...p, status: 'active' }));
+    setMessages(p => [...p, { id: p.length + 1, type: 'system', content: '🚀 Meeting started!', timestamp: new Date() }]);
+    
+    meetingConfig.selectedAgents.forEach((agentId, i) => {
+      const agent = agents.find(a => a.id === agentId);
+      setTimeout(() => {
+        const tokens = Math.floor(Math.random() * 100) + 50;
+        setMessages(p => [...p, { id: p.length + 1, type: 'agent', agentId, agentName: agent?.name || agentId, agentAvatar: agent?.avatar || '🤖', content: `Hello! Ready to contribute.`, timestamp: new Date(), tokens }]);
+        setTokenUsage(p => ({ total: p.total + tokens, byAgent: { ...p.byAgent, [agentId]: (p.byAgent[agentId] || 0) + tokens }, history: [...p.history, { agentId, tokens }] }));
+      }, (i + 1) * 800);
+    });
+  };
+
+  const handleSendMessage = () => {
+    if (!inputMessage.trim()) return;
+    setMessages(p => [...p, { id: p.length + 1, type: 'user', content: inputMessage, timestamp: new Date() }]);
+    const msg = inputMessage;
+    setInputMessage('');
+    
+    meetingConfig.selectedAgents.slice(0, 2).forEach((agentId, i) => {
+      const agent = agents.find(a => a.id === agentId);
+      const tokens = Math.floor(Math.random() * 300) + 100;
+      setTimeout(() => {
+        if (tokenUsage.total + tokens > meetingConfig.tokenBudget && !meetingConfig.allowBudgetOverflow) {
+          setMessages(p => [...p, { id: p.length + 1, type: 'system', content: '⚠️ Budget reached!', timestamp: new Date() }]);
+          return;
+        }
+        setMessages(p => [...p, { id: p.length + 1, type: 'agent', agentId, agentName: agent?.name || agentId, agentAvatar: agent?.avatar || '🤖', content: `Analyzing "${msg.slice(0, 20)}..." - I suggest we proceed systematically.`, timestamp: new Date(), tokens }]);
+        setTokenUsage(p => ({ total: p.total + tokens, byAgent: { ...p.byAgent, [agentId]: (p.byAgent[agentId] || 0) + tokens }, history: [...p.history, { agentId, tokens }] }));
+      }, (i + 1) * 1200);
+    });
+  };
+
+  const handleEndMeeting = () => {
+    setMessages(p => [...p, { id: p.length + 1, type: 'system', content: `📊 Meeting ended. Tokens: ${tokenUsage.total.toLocaleString()}`, timestamp: new Date() }]);
+    setActiveMeeting(p => ({ ...p, status: 'completed' }));
+  };
+
+  const selectWorkflow = (wfId) => {
+    const wf = WORKFLOW_TEMPLATES.find(w => w.id === wfId);
+    if (wf) setNewTask(p => ({ ...p, workflow: wfId, targetOffice: wf.suggestedOffice, estimatedTokens: wf.estimatedTokens }));
+  };
+
+  const handleCreateTask = () => {
+    if (!newTask.name) return;
+    onAssignTask?.({ id: `task_${Date.now()}`, ...newTask, status: 'pending', fromMeeting: activeMeeting?.id });
+    setShowTaskModal(false);
+    setNewTask({ name: '', description: '', assignedAgent: '', targetOffice: '', workflow: '', priority: 'medium', deadline: '', estimatedTokens: 5000 });
+    setMessages(p => [...p, { id: p.length + 1, type: 'system', content: `✅ Task created!`, timestamp: new Date() }]);
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="ams-overlay">
+      <div className="ams-modal">
+        <header className="ams-header">
+          <div className="ams-header-left"><span>📅</span><div><h1>Meeting System</h1><p>Token budgeting & workflows</p></div></div>
+          <button className="ams-close" onClick={onClose}>✕</button>
+        </header>
+
+        <nav className="ams-tabs">
+          <button className={activeTab === 'create' ? 'active' : ''} onClick={() => setActiveTab('create')}>➕ Create</button>
+          <button className={activeTab === 'active' ? 'active' : ''} onClick={() => setActiveTab('active')} disabled={!activeMeeting}>🎯 Active</button>
+          <button className={activeTab === 'workflows' ? 'active' : ''} onClick={() => setActiveTab('workflows')}>⚡ Workflows</button>
+        </nav>
+
+        <div className="ams-body">
+          {/* CREATE TAB */}
+          {activeTab === 'create' && (
+            <div className="ams-create">
+              <div className="ams-create-main">
+                <section className="ams-section">
+                  <h3>📋 Details</h3>
+                  <div className="ams-field"><label>Name</label><input type="text" value={meetingConfig.name} onChange={(e) => updateConfig('name', e.target.value)} placeholder="Meeting name..." /></div>
+                  <div className="ams-field"><label>Template</label>
+                    <div className="ams-templates">{MEETING_TEMPLATES.map(t => (<button key={t.id} className={meetingConfig.template === t.id ? 'selected' : ''} onClick={() => handleTemplateChange(t.id)}>{t.name}</button>))}</div>
+                  </div>
+                </section>
+                <section className="ams-section">
+                  <h3>🤖 Agents ({meetingConfig.selectedAgents.length})</h3>
+                  <div className="ams-agents-grid">
+                    {availableAgents.map(agent => (
+                      <div key={agent.id} className={`ams-agent-card ${meetingConfig.selectedAgents.includes(agent.id) ? 'selected' : ''}`} onClick={() => toggleAgent(agent.id)}>
+                        <span>{agent.avatar || '🤖'}</span><div><strong>{agent.name}</strong><small>{agent.role}</small></div>
+                        {meetingConfig.selectedAgents.includes(agent.id) && <span className="check">✓</span>}
+                      </div>
+                    ))}
+                  </div>
+                </section>
+                <section className="ams-section">
+                  <h3>🏢 Office</h3>
+                  <select value={meetingConfig.assignedOffice} onChange={(e) => updateConfig('assignedOffice', e.target.value)}>
+                    <option value="">No specific office</option>
+                    {offices.map(o => <option key={o.id} value={o.id}>{o.icon} {o.name}</option>)}
+                  </select>
+                </section>
+              </div>
+              <aside className="ams-create-sidebar">
+                <div className="ams-budget-card">
+                  <h3>🪙 Token Budget</h3>
+                  <div className="ams-budget-display"><span className="val">{meetingConfig.tokenBudget.toLocaleString()}</span><span>tokens</span></div>
+                  <input type="range" min="5000" max="200000" step="5000" value={meetingConfig.tokenBudget} onChange={(e) => updateConfig('tokenBudget', parseInt(e.target.value))} />
+                  <div className="ams-budget-presets">{[10000, 25000, 50000, 100000].map(v => (<button key={v} className={meetingConfig.tokenBudget === v ? 'active' : ''} onClick={() => updateConfig('tokenBudget', v)}>{v/1000}k</button>))}</div>
+                  <div className="ams-field"><label>Model</label><select value={meetingConfig.model} onChange={(e) => updateConfig('model', e.target.value)}>{Object.entries(TOKEN_PRICING).map(([k, v]) => <option key={k} value={k}>{v.name}</option>)}</select></div>
+                  <div className="ams-cost"><span>Est. Cost</span><strong>${estimatedCost.toFixed(4)}</strong></div>
+                  <label className="ams-checkbox"><input type="checkbox" checked={meetingConfig.allowBudgetOverflow} onChange={(e) => updateConfig('allowBudgetOverflow', e.target.checked)} />Allow overflow</label>
+                </div>
+                <button className="ams-btn-create" onClick={handleCreateMeeting} disabled={!meetingConfig.name || !meetingConfig.selectedAgents.length}>🚀 Create Meeting</button>
+              </aside>
+            </div>
+          )}
+
+          {/* ACTIVE TAB */}
+          {activeTab === 'active' && activeMeeting && (
+            <div className="ams-active">
+              <div className="ams-active-main">
+                <div className="ams-meeting-bar">
+                  <div><h2>{activeMeeting.name}</h2><span className={`badge ${activeMeeting.status}`}>{activeMeeting.status}</span></div>
+                  <div className="ams-meeting-actions">
+                    {activeMeeting.status === 'scheduled' && <button className="start" onClick={handleStartMeeting}>▶️ Start</button>}
+                    {activeMeeting.status === 'active' && <><button onClick={() => setShowTaskModal(true)}>➕ Task</button><button className="end" onClick={handleEndMeeting}>⏹️ End</button></>}
+                  </div>
+                </div>
+                <div className="ams-token-progress">
+                  <div className="bar"><div className="fill" style={{ width: `${Math.min(budgetUsagePercent, 100)}%`, background: budgetUsagePercent > 90 ? '#ef4444' : budgetUsagePercent > 70 ? '#f59e0b' : '#10b981' }}></div></div>
+                  <div className="stats"><span>🪙 {tokenUsage.total.toLocaleString()} / {meetingConfig.tokenBudget.toLocaleString()} ({budgetUsagePercent.toFixed(1)}%)</span></div>
+                </div>
+                <div className="ams-messages">
+                  {messages.map(msg => (
+                    <div key={msg.id} className={`ams-message ${msg.type}`}>
+                      {msg.type !== 'system' && <span className="avatar">{msg.type === 'user' ? '👤' : msg.agentAvatar}</span>}
+                      <div className="content"><strong>{msg.type === 'user' ? 'You' : msg.type === 'agent' ? msg.agentName : ''}</strong><p>{msg.content}</p>
+                        <div className="meta"><span>{msg.timestamp.toLocaleTimeString()}</span>{msg.tokens && <span>🪙 {msg.tokens}</span>}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {activeMeeting.status === 'active' && (
+                  <div className="ams-input"><input value={inputMessage} onChange={(e) => setInputMessage(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()} placeholder="Message..." /><button onClick={handleSendMessage}>Send</button></div>
+                )}
+              </div>
+              <aside className="ams-active-sidebar">
+                <h3>👥 Participants</h3>
+                {meetingConfig.selectedAgents.map(id => {
+                  const a = agents.find(x => x.id === id);
+                  return <div key={id} className="participant"><span>{a?.avatar || '🤖'}</span><div><strong>{a?.name}</strong><small>🪙 {(tokenUsage.byAgent[id] || 0).toLocaleString()}</small></div></div>;
+                })}
+                <h3>💰 Budget</h3>
+                <div className="budget-stats"><div><span>Remaining</span><strong style={{color: remainingBudget < 5000 ? '#ef4444' : '#10b981'}}>{remainingBudget.toLocaleString()}</strong></div></div>
+              </aside>
+            </div>
+          )}
+
+          {/* WORKFLOWS TAB */}
+          {activeTab === 'workflows' && (
+            <div className="ams-workflows">
+              <h2>⚡ Workflows</h2>
+              <div className="ams-workflow-grid">
+                {WORKFLOW_TEMPLATES.map(wf => (
+                  <div key={wf.id} className="ams-workflow-card">
+                    <div className="header"><span>{wf.icon}</span><h3>{wf.name}</h3></div>
+                    <div className="steps">{wf.steps.map((s, i) => <span key={i}>{i+1}. {s}</span>)}</div>
+                    <div className="meta"><span>🪙 {wf.estimatedTokens.toLocaleString()}</span><span>🏢 {wf.suggestedOffice}</span></div>
+                    <button onClick={() => { setShowTaskModal(true); selectWorkflow(wf.id); }}>Use</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* TASK MODAL */}
+        {showTaskModal && (
+          <div className="ams-task-overlay">
+            <div className="ams-task-modal">
+              <header><h2>➕ Create Task</h2><button onClick={() => setShowTaskModal(false)}>✕</button></header>
+              <div className="body">
+                <div className="ams-field"><label>Name</label><input value={newTask.name} onChange={(e) => setNewTask(p => ({...p, name: e.target.value}))} placeholder="Task name..." /></div>
+                <div className="ams-field"><label>Description</label><textarea value={newTask.description} onChange={(e) => setNewTask(p => ({...p, description: e.target.value}))} rows={2} /></div>
+                <div className="row">
+                  <div className="ams-field"><label>Agent</label><select value={newTask.assignedAgent} onChange={(e) => setNewTask(p => ({...p, assignedAgent: e.target.value}))}><option value="">Select...</option>{agents.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</select></div>
+                  <div className="ams-field"><label>Office</label><select value={newTask.targetOffice} onChange={(e) => setNewTask(p => ({...p, targetOffice: e.target.value}))}><option value="">Select...</option>{offices.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}</select></div>
+                </div>
+                <div className="ams-field"><label>Workflow</label>
+                  <div className="wf-select">{WORKFLOW_TEMPLATES.map(w => <button key={w.id} className={newTask.workflow === w.id ? 'selected' : ''} onClick={() => selectWorkflow(w.id)}>{w.icon} {w.name}</button>)}</div>
+                </div>
+                {newTask.workflow && <div className="selected-wf"><p>Steps: {WORKFLOW_TEMPLATES.find(w => w.id === newTask.workflow)?.steps.join(' → ')}</p><p>Est: 🪙 {newTask.estimatedTokens.toLocaleString()}</p></div>}
+                <div className="row">
+                  <div className="ams-field"><label>Priority</label><select value={newTask.priority} onChange={(e) => setNewTask(p => ({...p, priority: e.target.value}))}><option value="low">🟢 Low</option><option value="medium">🟡 Medium</option><option value="high">🔴 High</option></select></div>
+                  <div className="ams-field"><label>Token Budget</label><input type="number" value={newTask.estimatedTokens} onChange={(e) => setNewTask(p => ({...p, estimatedTokens: parseInt(e.target.value)}))} /></div>
+                </div>
+              </div>
+              <footer><button className="cancel" onClick={() => setShowTaskModal(false)}>Cancel</button><button className="create" onClick={handleCreateTask} disabled={!newTask.name}>✅ Create</button></footer>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default AdvancedMeetingSystem;

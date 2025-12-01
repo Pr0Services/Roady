@@ -1,0 +1,43 @@
+/*
+╔══════════════════════════════════════════════════════════════════════════════╗
+║   🏦 ACCOUNTING DEPARTMENT - STYLES                                          ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+*/
+
+.acc-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); backdrop-filter: blur(10px); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
+.acc-modal { background: #0f0f1a; border-radius: 20px; width: 100%; max-width: 1400px; height: 90vh; display: flex; flex-direction: column; overflow: hidden; }
+
+.acc-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; background: linear-gradient(135deg, #1a472a 0%, #0f2918 100%); border-bottom: 1px solid rgba(16,185,129,0.3); }
+.acc-header-left { display: flex; align-items: center; gap: 16px; }
+.acc-header-left span { font-size: 2.5rem; }
+.acc-header-left h1 { margin: 0; font-size: 1.5rem; color: #fff; }
+.acc-header-left p { margin: 4px 0 0; color: #10b981; }
+.acc-close { width: 40px; height: 40px; background: rgba(255,255,255,0.1); border: none; border-radius: 10px; color: #888; font-size: 1.2rem; cursor: pointer; }
+
+.acc-tabs { display: flex; gap: 4px; padding: 0 24px; background: rgba(0,0,0,0.3); border-bottom: 1px solid rgba(255,255,255,0.08); }
+.acc-tabs button { padding: 14px 20px; background: transparent; border: none; color: #888; cursor: pointer; border-bottom: 2px solid transparent; }
+.acc-tabs button.active { color: #10b981; border-bottom-color: #10b981; }
+
+.acc-body { flex: 1; overflow: hidden; display: flex; }
+
+/* Hierarchy */
+.acc-hierarchy { display: flex; flex: 1; overflow: hidden; }
+.acc-org-chart { flex: 1; padding: 24px; overflow-y: auto; }
+.acc-level { margin-bottom: 30px; }
+.acc-level-label { color: #10b981; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; padding-left: 8px; border-left: 3px solid #10b981; }
+.acc-level-roles { display: flex; flex-wrap: wrap; gap: 12px; }
+
+.acc-role-card { display: flex; align-items: center; gap: 12px; padding: 14px 18px; background: rgba(255,255,255,0.03); border: 2px solid rgba(255,255,255,0.08); border-radius: 12px; cursor: pointer; transition: all 0.2s; min-width: 250px; }
+.acc-role-card:hover { border-color: var(--priority-color); transform: translateY(-2px); }
+.acc-role-card.selected { border-color: #10b981; background: rgba(16,185,129,0.1); }
+.acc-role-avatar { font-size: 2rem; }
+.acc-role-info { flex: 1; }
+.acc-role-info strong { display: block; color: #fff; font-size: 0.9rem; }
+.acc-role-info small { color: #666; font-size: 0.75rem; }
+.acc-role-budget { padding: 4px 10px; background: rgba(16,185,129,0.2); border-radius: 20px; color: #10b981; font-size: 0.75rem; }
+
+/* Role Detail */
+.acc-role-detail { width: 350px; background: rgba(0,0,0,0.3); border-left: 1px solid rgba(255,255,255,0.08); padding: 24px; overflow-y: auto; }
+.acc-detail-header { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
+.acc-detail-avatar { font-size: 3rem; }
+.acc-detail-header h2 { margin: 0 0 6px; color: #fff; font-size: 1

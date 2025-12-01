@@ -1,0 +1,358 @@
+# ============================================
+# ROADY Construction - CI/CD Pipeline Complet
+# GitHub Actions Workflow
+# ============================================
+
+name: ROADY CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop, 'feature/**']
+  pull_request:
+    branches: [main, develop]
+  release:
+    types: [published]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  PYTHON_VERSION: '3.11'
+  NODE_VERSION: '20'
+
+jobs:
+  # ==========================================
+  # LINT & FORMAT CHECK
+  # ==========================================
+  lint:
+    name: 🔍 Lint & Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: Install linters
+        run: |
+          pip install black isort flake8 mypy
+      
+      - name: Check formatting (Black)
+        run: black --check backend/
+      
+      - name: Check imports (isort)
+        run: isort --check-only backend/
+      
+      - name: Lint (Flake8)
+        run: flake8 backend/ --max-line-length=100 --ignore=E501,W503
+      
+      - name: Type check (MyPy)
+        run: mypy backend/src --ignore-missing-imports
+
+  lint-frontend:
+    name: 🔍 Lint Frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+      
+      - name: Lint
+        working-directory: frontend
+        run: npm run lint
+      
+      - name: Type check
+        working-directory: frontend
+        run: npm run type-check
+
+  # ==========================================
+  # TESTS BACKEND
+  # ==========================================
+  test-backend:
+    name: 🧪 Test Backend
+    runs-on: ubuntu-latest
+    needs: lint
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: roady_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          pip install -r backend/requirements.txt
+          pip install pytest pytest-asyncio pytest-cov httpx
+      
+      - name: Run tests
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/roady_test
+          REDIS_URL: redis://localhost:6379/0
+          SECRET_KEY: test-secret-key
+        run: |
+          cd backend
+          pytest tests/ -v --cov=src --cov-report=xml --cov-report=html
+      
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: backend/coverage.xml
+          flags: backend
+          fail_ci_if_error: false
+
+  # ==========================================
+  # TESTS FRONTEND
+  # ==========================================
+  test-frontend:
+    name: 🧪 Test Frontend
+    runs-on: ubuntu-latest
+    needs: lint-frontend
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+      
+      - name: Run tests
+        working-directory: frontend
+        run: npm run test -- --coverage --watchAll=false
+      
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: frontend/coverage/lcov.info
+          flags: frontend
+
+  # ==========================================
+  # SECURITY SCAN
+  # ==========================================
+  security:
+    name: 🔒 Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+      
+      - name: SAST with Semgrep
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: p/python p/typescript
+
+  # ==========================================
+  # BUILD DOCKER IMAGES
+  # ==========================================
+  build:
+    name: 🏗️ Build Images
+    runs-on: ubuntu-latest
+    needs: [test-backend, test-frontend, security]
+    permissions:
+      contents: read
+      packages: write
+    
+    strategy:
+      matrix:
+        include:
+          - context: backend
+            image: roady-api
+          - context: frontend
+            image: roady-web
+          - context: agent-service
+            image: roady-agents
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.image }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=sha,prefix=
+      
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: ./${{ matrix.context }}
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ==========================================
+  # DEPLOY STAGING
+  # ==========================================
+  deploy-staging:
+    name: 🚀 Deploy Staging
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/develop'
+    environment:
+      name: staging
+      url: https://staging.roady.app
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+      
+      - name: Configure GCP credentials
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+      
+      - name: Get GKE credentials
+        uses: google-github-actions/get-gke-credentials@v2
+        with:
+          cluster_name: roady-staging
+          location: us-east1
+      
+      - name: Deploy to staging
+        run: |
+          kubectl set image deployment/roady-api \
+            api=${{ env.REGISTRY }}/${{ github.repository }}/roady-api:${{ github.sha }} \
+            -n roady-staging
+          kubectl set image deployment/roady-web \
+            web=${{ env.REGISTRY }}/${{ github.repository }}/roady-web:${{ github.sha }} \
+            -n roady-staging
+          kubectl rollout status deployment/roady-api -n roady-staging
+          kubectl rollout status deployment/roady-web -n roady-staging
+      
+      - name: Run smoke tests
+        run: |
+          sleep 30
+          curl -f https://staging.roady.app/health || exit 1
+
+  # ==========================================
+  # DEPLOY PRODUCTION
+  # ==========================================
+  deploy-production:
+    name: 🚀 Deploy Production
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'release'
+    environment:
+      name: production
+      url: https://roady.app
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+      
+      - name: Configure GCP credentials
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY_PROD }}
+      
+      - name: Get GKE credentials
+        uses: google-github-actions/get-gke-credentials@v2
+        with:
+          cluster_name: roady-production
+          location: us-east1
+      
+      - name: Deploy to production
+        run: |
+          kubectl set image deployment/roady-api \
+            api=${{ env.REGISTRY }}/${{ github.repository }}/roady-api:${{ github.ref_name }} \
+            -n roady-prod
+          kubectl set image deployment/roady-web \
+            web=${{ env.REGISTRY }}/${{ github.repository }}/roady-web:${{ github.ref_name }} \
+            -n roady-prod
+          kubectl rollout status deployment/roady-api -n roady-prod --timeout=300s
+          kubectl rollout status deployment/roady-web -n roady-prod --timeout=300s
+      
+      - name: Notify Slack
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": "🚀 ROADY ${{ github.ref_name }} deployed to production!"
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+
+  # ==========================================
+  # DATABASE MIGRATIONS
+  # ==========================================
+  migrate:
+    name: 📦 Run Migrations
+    runs-on: ubuntu-latest
+    needs: [deploy-staging, deploy-production]
+    if: always() && (needs.deploy-staging.result == 'success' || needs.deploy-production.result == 'success')
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run migrations
+        run: |
+          # Alembic migrations
+          echo "Running database migrations..."

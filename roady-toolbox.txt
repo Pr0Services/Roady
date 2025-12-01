@@ -1,0 +1,275 @@
+/*
+╔══════════════════════════════════════════════════════════════════════════════╗
+║   🧰 ROADY - COMPLETE TOOLBOX                                                ║
+║   All tools for agents, workflows, and automation                            ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+*/
+
+import React, { useState } from 'react';
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TOOL CATEGORIES & DEFINITIONS
+// ═══════════════════════════════════════════════════════════════════════════
+
+export const TOOL_CATEGORIES = {
+  communication: { id: 'communication', name: 'Communication', icon: '💬', color: '#6366f1' },
+  productivity: { id: 'productivity', name: 'Productivity', icon: '⚡', color: '#10b981' },
+  data: { id: 'data', name: 'Data & Analytics', icon: '📊', color: '#f59e0b' },
+  content: { id: 'content', name: 'Content Creation', icon: '🎨', color: '#ec4899' },
+  finance: { id: 'finance', name: 'Finance', icon: '💰', color: '#22c55e' },
+  development: { id: 'development', name: 'Development', icon: '💻', color: '#8b5cf6' },
+  marketing: { id: 'marketing', name: 'Marketing', icon: '📱', color: '#0ea5e9' },
+  integration: { id: 'integration', name: 'Integrations', icon: '🔗', color: '#14b8a6' },
+  ai: { id: 'ai', name: 'AI & ML', icon: '🤖', color: '#f472b6' },
+  utilities: { id: 'utilities', name: 'Utilities', icon: '🔧', color: '#64748b' }
+};
+
+export const TOOLS = [
+  // ═══════════════════ COMMUNICATION ═══════════════════
+  { id: 'email_sender', name: 'Email Sender', icon: '📧', category: 'communication', description: 'Send emails via SMTP/API', inputs: ['to', 'subject', 'body', 'attachments'], outputs: ['status', 'messageId'], tokenCost: 100 },
+  { id: 'slack_messenger', name: 'Slack Messenger', icon: '💬', category: 'communication', description: 'Send Slack messages', inputs: ['channel', 'message', 'blocks'], outputs: ['status', 'ts'], tokenCost: 50 },
+  { id: 'discord_bot', name: 'Discord Bot', icon: '🎮', category: 'communication', description: 'Discord messaging', inputs: ['serverId', 'channelId', 'message'], outputs: ['status'], tokenCost: 50 },
+  { id: 'sms_sender', name: 'SMS Sender', icon: '📱', category: 'communication', description: 'Send SMS via Twilio', inputs: ['phoneNumber', 'message'], outputs: ['status', 'sid'], tokenCost: 150 },
+  { id: 'teams_messenger', name: 'Teams Messenger', icon: '👥', category: 'communication', description: 'Microsoft Teams messages', inputs: ['teamId', 'channelId', 'message'], outputs: ['status'], tokenCost: 50 },
+  { id: 'webhook_caller', name: 'Webhook Caller', icon: '🔔', category: 'communication', description: 'Call external webhooks', inputs: ['url', 'method', 'payload', 'headers'], outputs: ['response', 'statusCode'], tokenCost: 30 },
+  
+  // ═══════════════════ PRODUCTIVITY ═══════════════════
+  { id: 'task_creator', name: 'Task Creator', icon: '✅', category: 'productivity', description: 'Create tasks in project tools', inputs: ['title', 'description', 'assignee', 'dueDate', 'priority'], outputs: ['taskId', 'status'], tokenCost: 80 },
+  { id: 'calendar_manager', name: 'Calendar Manager', icon: '📅', category: 'productivity', description: 'Manage calendar events', inputs: ['action', 'title', 'startTime', 'endTime', 'attendees'], outputs: ['eventId', 'status'], tokenCost: 100 },
+  { id: 'meeting_scheduler', name: 'Meeting Scheduler', icon: '🤝', category: 'productivity', description: 'Schedule meetings automatically', inputs: ['participants', 'duration', 'preferredTimes'], outputs: ['meetingId', 'scheduledTime'], tokenCost: 200 },
+  { id: 'reminder_setter', name: 'Reminder Setter', icon: '⏰', category: 'productivity', description: 'Set reminders', inputs: ['message', 'datetime', 'recipients'], outputs: ['reminderId'], tokenCost: 30 },
+  { id: 'note_taker', name: 'Note Taker', icon: '📝', category: 'productivity', description: 'Create and manage notes', inputs: ['title', 'content', 'tags'], outputs: ['noteId', 'url'], tokenCost: 50 },
+  { id: 'document_creator', name: 'Document Creator', icon: '📄', category: 'productivity', description: 'Generate documents', inputs: ['template', 'data', 'format'], outputs: ['documentUrl', 'documentId'], tokenCost: 150 },
+  { id: 'spreadsheet_editor', name: 'Spreadsheet Editor', icon: '📊', category: 'productivity', description: 'Edit spreadsheets', inputs: ['spreadsheetId', 'range', 'values', 'action'], outputs: ['status', 'updatedRange'], tokenCost: 100 },
+  
+  // ═══════════════════ DATA & ANALYTICS ═══════════════════
+  { id: 'data_fetcher', name: 'Data Fetcher', icon: '📥', category: 'data', description: 'Fetch data from APIs', inputs: ['url', 'method', 'params', 'headers'], outputs: ['data', 'statusCode'], tokenCost: 50 },
+  { id: 'data_transformer', name: 'Data Transformer', icon: '🔄', category: 'data', description: 'Transform data formats', inputs: ['data', 'transformations'], outputs: ['transformedData'], tokenCost: 100 },
+  { id: 'csv_processor', name: 'CSV Processor', icon: '📋', category: 'data', description: 'Process CSV files', inputs: ['csvData', 'operations'], outputs: ['processedData', 'summary'], tokenCost: 80 },
+  { id: 'json_parser', name: 'JSON Parser', icon: '{ }', category: 'data', description: 'Parse and manipulate JSON', inputs: ['jsonData', 'query'], outputs: ['result'], tokenCost: 30 },
+  { id: 'database_query', name: 'Database Query', icon: '🗄️', category: 'data', description: 'Execute database queries', inputs: ['query', 'params', 'database'], outputs: ['results', 'rowCount'], tokenCost: 100 },
+  { id: 'analytics_tracker', name: 'Analytics Tracker', icon: '📈', category: 'data', description: 'Track analytics events', inputs: ['event', 'properties', 'userId'], outputs: ['status'], tokenCost: 30 },
+  { id: 'report_generator', name: 'Report Generator', icon: '📊', category: 'data', description: 'Generate reports', inputs: ['dataSource', 'template', 'filters', 'format'], outputs: ['reportUrl', 'reportData'], tokenCost: 300 },
+  { id: 'data_validator', name: 'Data Validator', icon: '✔️', category: 'data', description: 'Validate data schemas', inputs: ['data', 'schema'], outputs: ['isValid', 'errors'], tokenCost: 50 },
+  
+  // ═══════════════════ CONTENT CREATION ═══════════════════
+  { id: 'text_generator', name: 'Text Generator', icon: '✍️', category: 'content', description: 'Generate text with AI', inputs: ['prompt', 'style', 'length', 'tone'], outputs: ['generatedText', 'tokensUsed'], tokenCost: 500 },
+  { id: 'image_generator', name: 'Image Generator', icon: '🖼️', category: 'content', description: 'Generate images with AI', inputs: ['prompt', 'style', 'size'], outputs: ['imageUrl', 'imageId'], tokenCost: 1000 },
+  { id: 'video_editor', name: 'Video Editor', icon: '🎬', category: 'content', description: 'Edit video clips', inputs: ['videoUrl', 'operations', 'outputFormat'], outputs: ['editedVideoUrl'], tokenCost: 2000 },
+  { id: 'audio_processor', name: 'Audio Processor', icon: '🎵', category: 'content', description: 'Process audio files', inputs: ['audioUrl', 'operations'], outputs: ['processedAudioUrl'], tokenCost: 500 },
+  { id: 'transcriber', name: 'Transcriber', icon: '🎤', category: 'content', description: 'Transcribe audio to text', inputs: ['audioUrl', 'language'], outputs: ['transcript', 'confidence'], tokenCost: 300 },
+  { id: 'translator', name: 'Translator', icon: '🌐', category: 'content', description: 'Translate text', inputs: ['text', 'sourceLang', 'targetLang'], outputs: ['translatedText'], tokenCost: 100 },
+  { id: 'summarizer', name: 'Summarizer', icon: '📝', category: 'content', description: 'Summarize long content', inputs: ['content', 'maxLength', 'style'], outputs: ['summary'], tokenCost: 200 },
+  { id: 'content_optimizer', name: 'Content Optimizer', icon: '🎯', category: 'content', description: 'Optimize content for SEO', inputs: ['content', 'keywords', 'platform'], outputs: ['optimizedContent', 'score'], tokenCost: 300 },
+  
+  // ═══════════════════ FINANCE ═══════════════════
+  { id: 'invoice_generator', name: 'Invoice Generator', icon: '🧾', category: 'finance', description: 'Generate invoices', inputs: ['client', 'items', 'dueDate', 'template'], outputs: ['invoiceUrl', 'invoiceId', 'total'], tokenCost: 150 },
+  { id: 'payment_processor', name: 'Payment Processor', icon: '💳', category: 'finance', description: 'Process payments', inputs: ['amount', 'currency', 'paymentMethod', 'recipient'], outputs: ['transactionId', 'status'], tokenCost: 200 },
+  { id: 'expense_tracker', name: 'Expense Tracker', icon: '📉', category: 'finance', description: 'Track expenses', inputs: ['amount', 'category', 'description', 'date'], outputs: ['expenseId', 'categoryTotal'], tokenCost: 50 },
+  { id: 'currency_converter', name: 'Currency Converter', icon: '💱', category: 'finance', description: 'Convert currencies', inputs: ['amount', 'fromCurrency', 'toCurrency'], outputs: ['convertedAmount', 'rate'], tokenCost: 20 },
+  { id: 'tax_calculator', name: 'Tax Calculator', icon: '🧮', category: 'finance', description: 'Calculate taxes', inputs: ['amount', 'taxType', 'jurisdiction'], outputs: ['taxAmount', 'total'], tokenCost: 100 },
+  { id: 'budget_analyzer', name: 'Budget Analyzer', icon: '📊', category: 'finance', description: 'Analyze budgets', inputs: ['budgetData', 'period', 'categories'], outputs: ['analysis', 'recommendations'], tokenCost: 250 },
+  { id: 'payroll_calculator', name: 'Payroll Calculator', icon: '💵', category: 'finance', description: 'Calculate payroll', inputs: ['employees', 'period', 'deductions'], outputs: ['payrollData', 'totals'], tokenCost: 300 },
+  
+  // ═══════════════════ DEVELOPMENT ═══════════════════
+  { id: 'code_generator', name: 'Code Generator', icon: '💻', category: 'development', description: 'Generate code snippets', inputs: ['description', 'language', 'framework'], outputs: ['code', 'explanation'], tokenCost: 400 },
+  { id: 'code_reviewer', name: 'Code Reviewer', icon: '🔍', category: 'development', description: 'Review code for issues', inputs: ['code', 'language', 'rules'], outputs: ['issues', 'suggestions', 'score'], tokenCost: 300 },
+  { id: 'api_tester', name: 'API Tester', icon: '🧪', category: 'development', description: 'Test API endpoints', inputs: ['endpoint', 'method', 'payload', 'headers'], outputs: ['response', 'latency', 'status'], tokenCost: 50 },
+  { id: 'git_manager', name: 'Git Manager', icon: '📦', category: 'development', description: 'Manage Git operations', inputs: ['repo', 'action', 'branch', 'message'], outputs: ['status', 'commitId'], tokenCost: 100 },
+  { id: 'docker_manager', name: 'Docker Manager', icon: '🐳', category: 'development', description: 'Manage Docker containers', inputs: ['action', 'containerName', 'image'], outputs: ['status', 'containerId'], tokenCost: 150 },
+  { id: 'log_analyzer', name: 'Log Analyzer', icon: '📜', category: 'development', description: 'Analyze log files', inputs: ['logs', 'patterns', 'timeRange'], outputs: ['analysis', 'anomalies'], tokenCost: 200 },
+  { id: 'deployment_manager', name: 'Deployment Manager', icon: '🚀', category: 'development', description: 'Manage deployments', inputs: ['environment', 'version', 'config'], outputs: ['deploymentId', 'status'], tokenCost: 300 },
+  
+  // ═══════════════════ MARKETING ═══════════════════
+  { id: 'social_poster', name: 'Social Poster', icon: '📱', category: 'marketing', description: 'Post to social media', inputs: ['platform', 'content', 'media', 'scheduledTime'], outputs: ['postId', 'status'], tokenCost: 100 },
+  { id: 'hashtag_generator', name: 'Hashtag Generator', icon: '#️⃣', category: 'marketing', description: 'Generate relevant hashtags', inputs: ['content', 'platform', 'count'], outputs: ['hashtags', 'popularity'], tokenCost: 50 },
+  { id: 'campaign_tracker', name: 'Campaign Tracker', icon: '📈', category: 'marketing', description: 'Track campaign metrics', inputs: ['campaignId', 'metrics', 'dateRange'], outputs: ['data', 'insights'], tokenCost: 150 },
+  { id: 'lead_scorer', name: 'Lead Scorer', icon: '🎯', category: 'marketing', description: 'Score leads', inputs: ['leadData', 'criteria'], outputs: ['score', 'tier', 'recommendations'], tokenCost: 200 },
+  { id: 'email_campaign', name: 'Email Campaign', icon: '📧', category: 'marketing', description: 'Manage email campaigns', inputs: ['template', 'recipients', 'subject', 'scheduledTime'], outputs: ['campaignId', 'status'], tokenCost: 250 },
+  { id: 'ab_tester', name: 'A/B Tester', icon: '🔬', category: 'marketing', description: 'Run A/B tests', inputs: ['variants', 'audience', 'metric', 'duration'], outputs: ['testId', 'results'], tokenCost: 300 },
+  { id: 'competitor_analyzer', name: 'Competitor Analyzer', icon: '🕵️', category: 'marketing', description: 'Analyze competitors', inputs: ['competitors', 'metrics'], outputs: ['analysis', 'opportunities'], tokenCost: 400 },
+  
+  // ═══════════════════ INTEGRATIONS ═══════════════════
+  { id: 'google_drive', name: 'Google Drive', icon: '📁', category: 'integration', description: 'Google Drive operations', inputs: ['action', 'fileId', 'data'], outputs: ['result', 'fileUrl'], tokenCost: 80 },
+  { id: 'dropbox', name: 'Dropbox', icon: '📦', category: 'integration', description: 'Dropbox operations', inputs: ['action', 'path', 'data'], outputs: ['result', 'link'], tokenCost: 80 },
+  { id: 'notion', name: 'Notion', icon: '📓', category: 'integration', description: 'Notion integration', inputs: ['action', 'pageId', 'data'], outputs: ['result'], tokenCost: 100 },
+  { id: 'airtable', name: 'Airtable', icon: '📊', category: 'integration', description: 'Airtable operations', inputs: ['base', 'table', 'action', 'data'], outputs: ['records', 'status'], tokenCost: 100 },
+  { id: 'hubspot', name: 'HubSpot', icon: '🧲', category: 'integration', description: 'HubSpot CRM integration', inputs: ['action', 'objectType', 'data'], outputs: ['result', 'id'], tokenCost: 150 },
+  { id: 'salesforce', name: 'Salesforce', icon: '☁️', category: 'integration', description: 'Salesforce integration', inputs: ['action', 'object', 'data'], outputs: ['result', 'id'], tokenCost: 150 },
+  { id: 'stripe', name: 'Stripe', icon: '💳', category: 'integration', description: 'Stripe payments', inputs: ['action', 'data'], outputs: ['result', 'id'], tokenCost: 100 },
+  { id: 'shopify', name: 'Shopify', icon: '🛒', category: 'integration', description: 'Shopify integration', inputs: ['action', 'resource', 'data'], outputs: ['result'], tokenCost: 120 },
+  { id: 'zapier', name: 'Zapier Trigger', icon: '⚡', category: 'integration', description: 'Trigger Zapier zaps', inputs: ['webhookUrl', 'data'], outputs: ['status'], tokenCost: 50 },
+  
+  // ═══════════════════ AI & ML ═══════════════════
+  { id: 'sentiment_analyzer', name: 'Sentiment Analyzer', icon: '😊', category: 'ai', description: 'Analyze text sentiment', inputs: ['text'], outputs: ['sentiment', 'score', 'breakdown'], tokenCost: 100 },
+  { id: 'entity_extractor', name: 'Entity Extractor', icon: '🏷️', category: 'ai', description: 'Extract named entities', inputs: ['text', 'entityTypes'], outputs: ['entities'], tokenCost: 150 },
+  { id: 'classifier', name: 'Text Classifier', icon: '🗂️', category: 'ai', description: 'Classify text into categories', inputs: ['text', 'categories'], outputs: ['classification', 'confidence'], tokenCost: 100 },
+  { id: 'embeddings_generator', name: 'Embeddings Generator', icon: '🧬', category: 'ai', description: 'Generate text embeddings', inputs: ['text', 'model'], outputs: ['embeddings', 'dimensions'], tokenCost: 50 },
+  { id: 'similarity_finder', name: 'Similarity Finder', icon: '🔗', category: 'ai', description: 'Find similar content', inputs: ['query', 'corpus', 'topK'], outputs: ['matches', 'scores'], tokenCost: 200 },
+  { id: 'intent_detector', name: 'Intent Detector', icon: '🎯', category: 'ai', description: 'Detect user intent', inputs: ['text', 'intents'], outputs: ['intent', 'confidence', 'entities'], tokenCost: 150 },
+  { id: 'chatbot_engine', name: 'Chatbot Engine', icon: '🤖', category: 'ai', description: 'Conversational AI', inputs: ['message', 'context', 'personality'], outputs: ['response', 'suggestedActions'], tokenCost: 300 },
+  { id: 'prediction_model', name: 'Prediction Model', icon: '🔮', category: 'ai', description: 'Make predictions', inputs: ['data', 'modelId', 'features'], outputs: ['prediction', 'confidence'], tokenCost: 400 },
+  
+  // ═══════════════════ UTILITIES ═══════════════════
+  { id: 'timer', name: 'Timer', icon: '⏱️', category: 'utilities', description: 'Set timers and delays', inputs: ['duration', 'unit'], outputs: ['elapsed', 'status'], tokenCost: 10 },
+  { id: 'scheduler', name: 'Scheduler', icon: '📆', category: 'utilities', description: 'Schedule recurring tasks', inputs: ['cronExpression', 'taskId'], outputs: ['scheduleId', 'nextRun'], tokenCost: 30 },
+  { id: 'file_converter', name: 'File Converter', icon: '🔄', category: 'utilities', description: 'Convert file formats', inputs: ['fileUrl', 'fromFormat', 'toFormat'], outputs: ['convertedFileUrl'], tokenCost: 100 },
+  { id: 'qr_generator', name: 'QR Generator', icon: '📱', category: 'utilities', description: 'Generate QR codes', inputs: ['data', 'size', 'format'], outputs: ['qrCodeUrl'], tokenCost: 20 },
+  { id: 'url_shortener', name: 'URL Shortener', icon: '🔗', category: 'utilities', description: 'Shorten URLs', inputs: ['url', 'customAlias'], outputs: ['shortUrl', 'analytics'], tokenCost: 20 },
+  { id: 'password_generator', name: 'Password Generator', icon: '🔐', category: 'utilities', description: 'Generate secure passwords', inputs: ['length', 'options'], outputs: ['password', 'strength'], tokenCost: 10 },
+  { id: 'encryptor', name: 'Encryptor', icon: '🔒', category: 'utilities', description: 'Encrypt/decrypt data', inputs: ['data', 'action', 'key'], outputs: ['result'], tokenCost: 30 },
+  { id: 'regex_tester', name: 'Regex Tester', icon: '🔤', category: 'utilities', description: 'Test regex patterns', inputs: ['pattern', 'testString', 'flags'], outputs: ['matches', 'groups'], tokenCost: 20 },
+  { id: 'diff_checker', name: 'Diff Checker', icon: '📝', category: 'utilities', description: 'Compare text differences', inputs: ['text1', 'text2'], outputs: ['diff', 'changes'], tokenCost: 30 },
+  { id: 'scraper', name: 'Web Scraper', icon: '🕷️', category: 'utilities', description: 'Scrape web content', inputs: ['url', 'selectors'], outputs: ['data', 'metadata'], tokenCost: 150 }
+];
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TOOLBOX COMPONENT
+// ═══════════════════════════════════════════════════════════════════════════
+
+const RoadyToolbox = ({ isOpen, onClose, onSelectTool, onConfigureTool, assignedTools = [] }) => {
+  const [activeCategory, setActiveCategory] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedTool, setSelectedTool] = useState(null);
+  const [viewMode, setViewMode] = useState('grid');
+
+  const filteredTools = TOOLS.filter(tool => {
+    const matchesCategory = activeCategory === 'all' || tool.category === activeCategory;
+    const matchesSearch = tool.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          tool.description.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
+
+  const toolsByCategory = filteredTools.reduce((acc, tool) => {
+    if (!acc[tool.category]) acc[tool.category] = [];
+    acc[tool.category].push(tool);
+    return acc;
+  }, {});
+
+  const stats = {
+    total: TOOLS.length,
+    assigned: assignedTools.length,
+    byCategory: Object.entries(TOOL_CATEGORIES).map(([id, cat]) => ({
+      ...cat,
+      count: TOOLS.filter(t => t.category === id).length
+    }))
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="tb-overlay">
+      <div className="tb-modal">
+        <header className="tb-header">
+          <div className="tb-header-left">
+            <span>🧰</span>
+            <div><h1>Toolbox</h1><p>{stats.total} tools available</p></div>
+          </div>
+          <div className="tb-header-right">
+            <div className="tb-search">
+              <span>🔍</span>
+              <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search tools..." />
+            </div>
+            <div className="tb-view-toggle">
+              <button className={viewMode === 'grid' ? 'active' : ''} onClick={() => setViewMode('grid')}>▦</button>
+              <button className={viewMode === 'list' ? 'active' : ''} onClick={() => setViewMode('list')}>☰</button>
+            </div>
+            <button className="tb-close" onClick={onClose}>✕</button>
+          </div>
+        </header>
+
+        <div className="tb-body">
+          <aside className="tb-sidebar">
+            <div className="tb-categories">
+              <button className={`tb-cat-btn ${activeCategory === 'all' ? 'active' : ''}`} onClick={() => setActiveCategory('all')}>
+                <span>📚</span><span>All Tools</span><span className="tb-count">{stats.total}</span>
+              </button>
+              {stats.byCategory.map(cat => (
+                <button key={cat.id} className={`tb-cat-btn ${activeCategory === cat.id ? 'active' : ''}`} onClick={() => setActiveCategory(cat.id)} style={{'--cat-color': cat.color}}>
+                  <span>{cat.icon}</span><span>{cat.name}</span><span className="tb-count">{cat.count}</span>
+                </button>
+              ))}
+            </div>
+          </aside>
+
+          <main className="tb-main">
+            {viewMode === 'grid' ? (
+              <div className="tb-tools-grid">
+                {filteredTools.map(tool => {
+                  const category = TOOL_CATEGORIES[tool.category];
+                  const isAssigned = assignedTools.includes(tool.id);
+                  return (
+                    <div key={tool.id} className={`tb-tool-card ${selectedTool?.id === tool.id ? 'selected' : ''} ${isAssigned ? 'assigned' : ''}`} onClick={() => setSelectedTool(tool)} style={{'--tool-color': category?.color}}>
+                      <div className="tb-tool-header">
+                        <span className="tb-tool-icon">{tool.icon}</span>
+                        {isAssigned && <span className="tb-assigned-badge">✓</span>}
+                      </div>
+                      <h3>{tool.name}</h3>
+                      <p>{tool.description}</p>
+                      <div className="tb-tool-meta">
+                        <span className="tb-tool-category">{category?.icon} {category?.name}</span>
+                        <span className="tb-tool-cost">🪙 {tool.tokenCost}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="tb-tools-list">
+                {Object.entries(toolsByCategory).map(([catId, tools]) => {
+                  const category = TOOL_CATEGORIES[catId];
+                  return (
+                    <div key={catId} className="tb-list-section">
+                      <h3 style={{color: category?.color}}>{category?.icon} {category?.name}</h3>
+                      {tools.map(tool => (
+                        <div key={tool.id} className={`tb-list-item ${selectedTool?.id === tool.id ? 'selected' : ''}`} onClick={() => setSelectedTool(tool)}>
+                          <span className="tb-list-icon">{tool.icon}</span>
+                          <div className="tb-list-info"><strong>{tool.name}</strong><small>{tool.description}</small></div>
+                          <span className="tb-list-cost">🪙 {tool.tokenCost}</span>
+                          <button className="tb-list-add" onClick={(e) => { e.stopPropagation(); onSelectTool?.(tool); }}>+</button>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </main>
+
+          {selectedTool && (
+            <aside className="tb-detail">
+              <div className="tb-detail-header" style={{background: `${TOOL_CATEGORIES[selectedTool.category]?.color}20`}}>
+                <span className="tb-detail-icon">{selectedTool.icon}</span>
+                <div><h2>{selectedTool.name}</h2><span className="tb-detail-cat">{TOOL_CATEGORIES[selectedTool.category]?.name}</span></div>
+              </div>
+              <div className="tb-detail-body">
+                <p className="tb-detail-desc">{selectedTool.description}</p>
+                
+                <div className="tb-detail-section">
+                  <h4>📥 Inputs</h4>
+                  <div className="tb-io-list">{selectedTool.inputs.map((input, i) => <span key={i} className="tb-io-tag input">{input}</span>)}</div>
+                </div>
+                
+                <div className="tb-detail-section">
+                  <h4>📤 Outputs</h4>
+                  <div className="tb-io-list">{selectedTool.outputs.map((output, i) => <span key={i} className="tb-io-tag output">{output}</span>)}</div>
+                </div>
+                
+                <div className="tb-detail-section">
+                  <h4>🪙 Token Cost</h4>
+                  <div className="tb-cost-display">{selectedTool.tokenCost} tokens/call</div>
+                </div>
+              </div>
+              <div className="tb-detail-actions">
+                <button className="tb-btn-configure" onClick={() => onConfigureTool?.(selectedTool)}>⚙️ Configure</button>
+                <button className="tb-btn-add" onClick={() => { onSelectTool?.(selectedTool); }}>➕ Add to Agent</button>
+              </div>
+            </aside>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default RoadyToolbox;

@@ -1,0 +1,166 @@
+/*
+╔══════════════════════════════════════════════════════════════════════════════╗
+║   📊 ROADY - ANALYTICS DASHBOARD                                             ║
+║   KPIs, Charts, Reports, Performance Metrics                                 ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+*/
+
+import React, { useState, useMemo } from 'react';
+
+const AnalyticsDashboard = ({ isOpen, onClose, agents = [], meetings = [], tasks = [], tokenUsage = [], offices = [], dateRange = '7d' }) => {
+  const [activePeriod, setActivePeriod] = useState('7d');
+  const [activeSection, setActiveSection] = useState('overview');
+
+  // Calculate KPIs
+  const kpis = useMemo(() => {
+    const totalTokens = tokenUsage.reduce((s, t) => s + (t.tokens || 0), 0);
+    const totalCost = tokenUsage.reduce((s, t) => s + (t.cost || 0), 0);
+    const completedTasks = tasks.filter(t => t.status === 'done' || t.status === 'completed').length;
+    const activeMeetings = meetings.filter(m => m.status === 'active').length;
+    const avgTokensPerMeeting = meetings.length ? totalTokens / meetings.length : 0;
+    const taskCompletionRate = tasks.length ? (completedTasks / tasks.length) * 100 : 0;
+    const activeAgents = agents.filter(a => a.status === 'active' || a.status === 'available').length;
+    const avgTokensPerAgent = activeAgents ? totalTokens / activeAgents : 0;
+    
+    return {
+      totalTokens, totalCost, completedTasks, activeMeetings, avgTokensPerMeeting,
+      taskCompletionRate, activeAgents, totalAgents: agents.length, totalTasks: tasks.length,
+      totalMeetings: meetings.length, avgTokensPerAgent,
+      costPerTask: completedTasks ? totalCost / completedTasks : 0,
+      efficiency: taskCompletionRate > 0 ? (taskCompletionRate / (totalCost || 1)) * 100 : 0
+    };
+  }, [agents, meetings, tasks, tokenUsage]);
+
+  // Simulated chart data
+  const chartData = useMemo(() => ({
+    tokensByDay: [
+      { day: 'Mon', tokens: 12000 }, { day: 'Tue', tokens: 18000 }, { day: 'Wed', tokens: 15000 },
+      { day: 'Thu', tokens: 22000 }, { day: 'Fri', tokens: 19000 }, { day: 'Sat', tokens: 8000 }, { day: 'Sun', tokens: 5000 }
+    ],
+    tasksByStatus: [
+      { status: 'Completed', count: kpis.completedTasks, color: '#10b981' },
+      { status: 'In Progress', count: Math.floor(kpis.totalTasks * 0.3), color: '#f59e0b' },
+      { status: 'Pending', count: Math.floor(kpis.totalTasks * 0.2), color: '#6366f1' }
+    ],
+    agentPerformance: agents.slice(0, 5).map(a => ({ name: a.name, tasks: Math.floor(Math.random() * 20) + 5, tokens: Math.floor(Math.random() * 10000) + 2000 })),
+    costByDepartment: [
+      { dept: 'Engineering', cost: kpis.totalCost * 0.4 },
+      { dept: 'Marketing', cost: kpis.totalCost * 0.25 },
+      { dept: 'Sales', cost: kpis.totalCost * 0.2 },
+      { dept: 'Support', cost: kpis.totalCost * 0.15 }
+    ]
+  }), [kpis, agents]);
+
+  const maxTokens = Math.max(...chartData.tokensByDay.map(d => d.tokens));
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="ad-overlay">
+      <div className="ad-modal">
+        <header className="ad-header">
+          <div className="ad-header-left"><span>📊</span><div><h1>Analytics Dashboard</h1><p>Performance metrics & insights</p></div></div>
+          <div className="ad-header-right">
+            <div className="ad-period-selector">
+              {['24h', '7d', '30d', '90d'].map(p => (
+                <button key={p} className={activePeriod === p ? 'active' : ''} onClick={() => setActivePeriod(p)}>{p}</button>
+              ))}
+            </div>
+            <button className="ad-btn">📤 Export</button>
+            <button className="ad-close" onClick={onClose}>✕</button>
+          </div>
+        </header>
+
+        <nav className="ad-nav">
+          {['overview', 'tokens', 'agents', 'tasks', 'costs'].map(s => (
+            <button key={s} className={activeSection === s ? 'active' : ''} onClick={() => setActiveSection(s)}>
+              {s === 'overview' && '📈'}{s === 'tokens' && '🪙'}{s === 'agents' && '🤖'}{s === 'tasks' && '✅'}{s === 'costs' && '💰'} {s.charAt(0).toUpperCase() + s.slice(1)}
+            </button>
+          ))}
+        </nav>
+
+        <div className="ad-body">
+          {/* KPI Cards */}
+          <div className="ad-kpi-grid">
+            <div className="ad-kpi-card"><div className="ad-kpi-icon" style={{background: 'rgba(99,102,241,0.2)', color: '#818cf8'}}>🪙</div><div className="ad-kpi-content"><span className="ad-kpi-value">{(kpis.totalTokens / 1000).toFixed(1)}k</span><span className="ad-kpi-label">Total Tokens</span></div><span className="ad-kpi-trend up">↑ 12%</span></div>
+            <div className="ad-kpi-card"><div className="ad-kpi-icon" style={{background: 'rgba(16,185,129,0.2)', color: '#34d399'}}>✅</div><div className="ad-kpi-content"><span className="ad-kpi-value">{kpis.completedTasks}</span><span className="ad-kpi-label">Tasks Completed</span></div><span className="ad-kpi-trend up">↑ 8%</span></div>
+            <div className="ad-kpi-card"><div className="ad-kpi-icon" style={{background: 'rgba(245,158,11,0.2)', color: '#fbbf24'}}>💰</div><div className="ad-kpi-content"><span className="ad-kpi-value">${kpis.totalCost.toFixed(2)}</span><span className="ad-kpi-label">Total Cost</span></div><span className="ad-kpi-trend down">↓ 5%</span></div>
+            <div className="ad-kpi-card"><div className="ad-kpi-icon" style={{background: 'rgba(236,72,153,0.2)', color: '#f472b6'}}>🤖</div><div className="ad-kpi-content"><span className="ad-kpi-value">{kpis.activeAgents}/{kpis.totalAgents}</span><span className="ad-kpi-label">Active Agents</span></div><span className="ad-kpi-trend neutral">→ 0%</span></div>
+          </div>
+
+          <div className="ad-charts-grid">
+            {/* Token Usage Chart */}
+            <div className="ad-chart-card">
+              <h3>🪙 Token Usage (Last 7 Days)</h3>
+              <div className="ad-bar-chart">
+                {chartData.tokensByDay.map((d, i) => (
+                  <div key={i} className="ad-bar-item">
+                    <div className="ad-bar-container"><div className="ad-bar" style={{ height: `${(d.tokens / maxTokens) * 100}%` }}><span className="ad-bar-value">{(d.tokens/1000).toFixed(0)}k</span></div></div>
+                    <span className="ad-bar-label">{d.day}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Task Distribution */}
+            <div className="ad-chart-card">
+              <h3>✅ Task Distribution</h3>
+              <div className="ad-donut-chart">
+                <div className="ad-donut">
+                  <div className="ad-donut-center"><span>{kpis.taskCompletionRate.toFixed(0)}%</span><small>Complete</small></div>
+                </div>
+                <div className="ad-donut-legend">
+                  {chartData.tasksByStatus.map((s, i) => (
+                    <div key={i} className="ad-legend-item"><span className="ad-legend-dot" style={{background: s.color}}></span><span>{s.status}</span><strong>{s.count}</strong></div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Agent Performance */}
+            <div className="ad-chart-card">
+              <h3>🤖 Top Performing Agents</h3>
+              <div className="ad-agent-list">
+                {chartData.agentPerformance.map((a, i) => (
+                  <div key={i} className="ad-agent-row">
+                    <span className="ad-agent-rank">#{i + 1}</span>
+                    <span className="ad-agent-name">{a.name}</span>
+                    <div className="ad-agent-stats"><span>✅ {a.tasks}</span><span>🪙 {(a.tokens/1000).toFixed(1)}k</span></div>
+                    <div className="ad-agent-bar"><div style={{ width: `${(a.tasks / 25) * 100}%` }}></div></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Cost by Department */}
+            <div className="ad-chart-card">
+              <h3>💰 Cost by Department</h3>
+              <div className="ad-horizontal-bars">
+                {chartData.costByDepartment.map((d, i) => (
+                  <div key={i} className="ad-h-bar-row">
+                    <span className="ad-h-bar-label">{d.dept}</span>
+                    <div className="ad-h-bar-container"><div className="ad-h-bar" style={{ width: `${(d.cost / kpis.totalCost) * 100}%` }}></div></div>
+                    <span className="ad-h-bar-value">${d.cost.toFixed(2)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Efficiency Metrics */}
+            <div className="ad-chart-card full-width">
+              <h3>📈 Efficiency Metrics</h3>
+              <div className="ad-metrics-row">
+                <div className="ad-metric"><span className="ad-metric-value">{kpis.avgTokensPerMeeting.toFixed(0)}</span><span className="ad-metric-label">Avg Tokens/Meeting</span></div>
+                <div className="ad-metric"><span className="ad-metric-value">${kpis.costPerTask.toFixed(4)}</span><span className="ad-metric-label">Cost per Task</span></div>
+                <div className="ad-metric"><span className="ad-metric-value">{kpis.avgTokensPerAgent.toFixed(0)}</span><span className="ad-metric-label">Avg Tokens/Agent</span></div>
+                <div className="ad-metric"><span className="ad-metric-value">{kpis.taskCompletionRate.toFixed(1)}%</span><span className="ad-metric-label">Completion Rate</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default AnalyticsDashboard;
